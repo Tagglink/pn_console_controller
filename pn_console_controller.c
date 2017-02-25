@@ -225,6 +225,36 @@ static void pn_teensy_i2c_read(char dev_addr, char reg_addr, char *buf, unsigned
 	}
 }
 
+static void pn_teensy_i2c_dev_read(char dev_addr, char reg_addr, char *buf, unsigned short len, int* error) {
+	int i2c_dev;
+	int bus_num = 1;
+	int read_bytes;
+	char filename[20];
+
+	pr_err("i2c READ\n");
+
+	memset(buf, 0, len); // clear the buffer
+
+	snprintf(filename, 19, "/dev/i2c-%d", bus_num);
+	i2c_dev = open(filename, O_RDWR);
+
+	if (file < 0) {
+		*(error) = 1;
+		return;
+	}
+
+	if (ioctl(file, I2C_SLAVE, dev_addr)) {
+		*(error) = 1;
+		return;
+	}
+
+	read_bytes = i2c_smbus_read_block_data(i2c_dev, reg_addr, buf);
+
+	if (read_bytes != len) {
+		*(error) = 1;
+	}
+}
+
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
 	int i;
 	int i2c_read_error = 0;
@@ -251,7 +281,7 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 			interrupt = GPIO_READ(pn_teensy_interrupt_gpio);
 
 			if (interrupt) {
-				pn_teensy_i2c_read(i2cAddress, TEENSY_READ_INPUT, result, 10, &i2c_read_error);
+				pn_teensy_i2c_dev_read(i2cAddress, TEENSY_READ_INPUT, result, 10, &i2c_read_error);
 				break;
 			}
 
