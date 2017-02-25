@@ -194,6 +194,37 @@ static void pn_teensy_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned
 	wait_i2c_done(timeout);
 }
 
+static void pn_teensy_i2c_read(char dev_addr, char reg_addr, char *buf, unsigned short len, int* error) {
+	unsigned short bufidx;
+	int timeout = 0;
+	int interrupt = 0;
+
+	pr_err("i2c READ\n");
+
+	bufidx = 0;
+
+	memset(buf, 0, len); // clear the buffer
+
+	BSC1_DLEN = len;
+	BSC1_S = CLEAR_STATUS; // Reset status bits (see #define)
+	BSC1_C = START_READ; // Start Read after clearing FIFO (see #define)
+
+	do {
+		// Wait for some data to appear in the FIFO
+		while ((BSC1_S & BSC_S_TA) && !(BSC1_S & BSC_S_RXD));
+
+		// Consume the FIFO
+		while ((BSC1_S & BSC_S_RXD) && (bufidx < len)) {
+			buf[bufidx++] = BSC1_FIFO;
+		}
+	} while ((!(BSC1_S & BSC_S_DONE)));
+
+	if ((BSC1_S & BSC_S_CLKT)) {
+		pr_err("Clock was stretched! Teensy is not responding!\n");
+		*(error) = 1;
+	}
+}
+
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
 	int i;
 	int i2c_read_error = 0;
