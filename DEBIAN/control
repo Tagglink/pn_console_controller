@@ -1,0 +1,10 @@
+Package: pn_console_controller-dkms
+Version: $MKVERSION
+Architecture: all
+Maintainer: Tagglink <tagglink42@gmail.com>
+Installed-Size: 74
+Depends: dkms (>= 1.95)
+Section: misc
+Priority: optional
+Description: pn_console_controller
+
