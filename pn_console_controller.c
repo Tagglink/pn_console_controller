@@ -172,7 +172,7 @@ static void wait_i2c_done(int* timeout) {
 	}
 }
 
-static void pn_teensy_i2c_write(char dev_addr, char reg_addr, char *buf, unsigned short len, int* timeout) {
+static void pn_teensy_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short len, int* timeout) {
 	int idx;
 
 	pr_err("i2c WRITE\n");
@@ -191,7 +191,7 @@ static void pn_teensy_i2c_write(char dev_addr, char reg_addr, char *buf, unsigne
 	BSC1_S = CLEAR_STATUS; // Reset status bits (see #define)
 	BSC1_C = START_WRITE; // Start Write (see #define)
 
-	wait_i2c1_done(timeout);
+	wait_i2c_done(timeout);
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
