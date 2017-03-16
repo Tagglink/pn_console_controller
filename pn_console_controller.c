@@ -365,7 +365,7 @@ static void pn_set_volume(int dev_addr, unsigned char volume) {
 	pn_i2c_write(dev_addr, 0x05, &mapped_vol, 1, &timeout);
 
 	if (!timeout) {
-		pr_err("Sent %d dB volume to TPA2016. Unmapped value: %d", mapped_vol, volume)
+		pr_err("Sent %d dB volume to TPA2016. Unmapped value: %d", mapped_vol, volume);
 	}
 }
 
@@ -420,7 +420,9 @@ static int __init pn_setup_teensy(struct pn* pn) {
 	struct input_dev *input_dev;
 	int i;
 	int err;
+	int timeout;
 	char phys[32];
+	unsigned char tx = 0x00;
 
 	pn->inpdev = input_dev = input_allocate_device();
 	if (!input_dev) {
@@ -460,7 +462,9 @@ static int __init pn_setup_teensy(struct pn* pn) {
 	setGpioAsInput(pn_teensy_interrupt_gpio);
 	setGpioPullUpState(0x01, (1 << pn_teensy_interrupt_gpio));
 
-	pn_i2c_write()
+	// Configuring the amplifier
+	tx = 0xC2;
+	pn_i2c_write(pn->i2cAddresses[1], 0x01, &tx, 1, &timeout);
 
 	err = input_register_device(pn->inpdev);
 	if (err)
