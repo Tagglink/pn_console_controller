@@ -331,7 +331,7 @@ static void pn_teensy_read_volume(int dev_addr, unsigned char* volume_buf, int* 
 			interrupt = GPIO_READ(pn_teensy_interrupt_gpio);
 
 			if (interrupt) {
-				pn_i2c_read(i2cAddress, result, 1, &i2c_read_error);
+				pn_i2c_read(dev_addr, result, 1, &i2c_read_error);
 				break;
 			}
 
