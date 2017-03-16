@@ -68,6 +68,7 @@ MODULE_LICENSE("GPL");
 #define TEENSY_READ_INPUT      0x10
 #define TEENSY_BOUNCE_INTERVAL 0x20
 #define TEENSY_I2C_CLOCKRATE   0x30
+#define TEENSY_READ_VOLUME     0x40
 
  /*
  * Defines for I2C peripheral (aka BSC, or Broadcom Serial Controller)
@@ -172,17 +173,14 @@ static void wait_i2c_done(int* timeout) {
 	}
 }
 
-static void pn_teensy_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short len, int* timeout) {
+static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short len, int* timeout) {
 	int idx;
 
 	pr_err("i2c WRITE\n");
 
 	BSC1_A = dev_addr;
 	BSC1_DLEN = len + 1; // one byte for the register address, plus the buffer length
-
-	if (!(BSC1_S & BSC_S_TXE)) {
-		BSC1_C = BSC_C_CLEAR;
-	}
+	BSC1_C = BSC_C_CLEAR;
 
 	BSC1_FIFO = reg_addr; // start register address
 	for (idx = 0; idx < len; idx++)
@@ -194,7 +192,7 @@ static void pn_teensy_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned
 	wait_i2c_done(timeout);
 }
 
-static void pn_teensy_i2c_read(char dev_addr, char reg_addr, char *buf, unsigned short len, int* error) {
+static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error) {
 	unsigned short bufidx;
 	int timeout = 0;
 	int interrupt = 0;
@@ -233,25 +231,25 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 	int max_int_read_tries = 10;
 
 	/*
-	* byte 0: L-Stick X
-	* byte 1: L-Stick Y
-	* byte 2: R-Stick X
-	* byte 3: R-Stick Y
-	* byte 4: A, B, X, Y, L, R, Select, Start
-	* byte 5: L-Stick, R-Stick, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down
+	* byte 0-1: L-Stick X
+	* byte 2-3: L-Stick Y
+	* byte 4-5: R-Stick X
+	* byte 6-7: R-Stick Y
+	* byte 8: A, B, X, Y, L, R, Select, Start
+	* byte 9: L-Stick, R-Stick, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down
 	*/
 	char result[10];
 
 	pr_err("reading teensy packet...\n");
 
-	pn_teensy_i2c_write(i2cAddress, TEENSY_READ_INPUT, NULL, 0, &timeout);
+	pn_i2c_write(i2cAddress, TEENSY_READ_INPUT, NULL, 0, &timeout);
 
 	if (!timeout) {
 		do {
 			interrupt = GPIO_READ(pn_teensy_interrupt_gpio);
 
 			if (interrupt) {
-				pn_teensy_i2c_read(i2cAddress, TEENSY_READ_INPUT, result, 10, &i2c_read_error);
+				pn_i2c_read(i2cAddress, result, 10, &i2c_read_error);
 				break;
 			}
 
@@ -317,14 +315,74 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 	input_sync(dev);
 }
 
+static void pn_teensy_read_volume(int dev_addr, unsigned char* volume_buf, int* error) {
+	int i;
+	int i2c_read_error = 0;
+	int interrupt = 0;
+	int timeout = 0;
+	int max_int_read_tries = 10;
+
+	char* result;
+
+	pn_i2c_write(dev_addr, TEENSY_READ_VOLUME, NULL, 0, &timeout);
+
+	if (!timeout) {
+		do {
+			interrupt = GPIO_READ(pn_teensy_interrupt_gpio);
+
+			if (interrupt) {
+				pn_i2c_read(i2cAddress, result, 1, &i2c_read_error);
+				break;
+			}
+
+			udelay(1000);
+		} while (--max_int_read_tries);
+	}
+	else {
+		pr_err("i2c write timed out");
+	}
+
+	if (!max_int_read_tries)
+		pr_err("Gave up waiting for interrupt.\n");
+
+	if (i2c_read_error || timeout || !max_int_read_tries) {
+		*(error) = 1;
+	}
+	else {
+		*(volume_buf) = *(result);
+
+		pr_err("volume packet read!\n");
+	}
+}
+
+static void pn_set_volume(int dev_addr, unsigned char volume) {
+	int timeout = 0;
+	int mapped_vol = ((volume * 58) / 255) - 28;
+
+	if (mapped_vol < 0)
+		mapped_vol |= 0x10; // if negative, manually make sure the 5th bit is 1
+
+	pn_i2c_write(dev_addr, 0x05, &mapped_vol, 1, &timeout);
+
+	if (!timeout) {
+		pr_err("Sent %d dB volume to TPA2016. Unmapped value: %d", mapped_vol, volume)
+	}
+}
+
 static void pn_process_packet(struct pn* pn) {
 	unsigned char data[pn_teensy_input_bytes];
+	unsigned char volume;
 	int error = 0;
 
 	pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 
 	if (!error)
 		pn_teensy_input_report(pn->inpdev, data);
+
+	pn_teensy_read_volume(pn->i2cAddresses[0], &volume, &error);
+
+	if (!error)
+		pn_set_volume(pn->i2cAddresses[1], volume);
 }
 
 static void pn_timer(unsigned long private) {
@@ -401,6 +459,8 @@ static int __init pn_setup_teensy(struct pn* pn) {
 
 	setGpioAsInput(pn_teensy_interrupt_gpio);
 	setGpioPullUpState(0x01, (1 << pn_teensy_interrupt_gpio));
+
+	pn_i2c_write()
 
 	err = input_register_device(pn->inpdev);
 	if (err)
