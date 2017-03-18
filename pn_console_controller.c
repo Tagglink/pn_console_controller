@@ -317,13 +317,17 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 	input_sync(dev);
 }
 
-static void pn_set_volume(int dev_addr, unsigned char volume) {
+static void pn_set_volume(int dev_addr, unsigned char data) {
 	int timeout = 0;
+	int volume = data;
+
+	if (data & 0x80)
+		volume |= 0x10;
 
 	pn_i2c_write(dev_addr, 0x05, &volume, 1, &timeout);
 
 	if (!timeout) {
-		pr_err("Sent %d dB volume to TPA2016.", volume);
+		pr_err("Sent %d dB volume to TPA2016.", (signed char)data);
 	}
 }
 
