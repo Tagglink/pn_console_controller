@@ -3,7 +3,7 @@
 *
 *  Copyright (c) 2017 Tomas Granlund
 *
-*  Based on the pn_arcade_joystick_rpi driver by Matthieu Proucelle
+*  Based on the mk_arcade_joystick_rpi driver by Matthieu Proucelle
 */
 
 
@@ -115,7 +115,7 @@ struct pn_config {
 static struct pn_config pn_cfg __initdata;
 
 module_param_array_named(args, pn_cfg.args, int, &(pn_cfg.nargs), 0);
-MODULE_PARM_DESC(args, "0: teensy i2c address, 1: amplifier i2c address");
+MODULE_PARM_DESC(args, "0: teensy i2c address, 1: TPA2016D2 i2c address");
 
 #define PN_REFRESH_TIME HZ/100
 
@@ -130,7 +130,7 @@ struct pn {
 static struct pn *pn_base;
 
 static const int pn_teensy_button_count = 16;
-static const int pn_teensy_input_bytes = 24;
+static const int pn_teensy_package_bytes = 25;
 static const int pn_teensy_interrupt_gpio = 26;
 static const int pn_i2c_timeout_cycles = 5000;
 
@@ -225,10 +225,9 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
 	int i;
-	int i2c_read_error = 0;
-	int interrupt = 0;
-	int timeout = 0;
+	int i2c_read_error = 0, interrupt = 0, timeout = 0;
 	int max_int_read_tries = 10;
+	const int package_len = 11;
 
 	/*
 	* byte 0-1: L-Stick X
@@ -236,9 +235,10 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 	* byte 4-5: R-Stick X
 	* byte 6-7: R-Stick Y
 	* byte 8: A, B, X, Y, L, R, Select, Start
-	* byte 9: L-Stick, R-Stick, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down
+	* byte 9: L-Stick, R-Stick, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down, Custom1, Custom2
+	* byte 10: volume
 	*/
-	char result[10];
+	char result[package_len];
 
 	pr_err("reading teensy packet...\n");
 
@@ -249,7 +249,7 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 			interrupt = GPIO_READ(pn_teensy_interrupt_gpio);
 
 			if (interrupt) {
-				pn_i2c_read(i2cAddress, result, 10, &i2c_read_error);
+				pn_i2c_read(i2cAddress, result, package_len, &i2c_read_error);
 				break;
 			}
 
@@ -283,6 +283,8 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 			data[i] = (result[9] << (i - 16)) & 0x80;
 		}
 
+		data[24] = result[10];
+
 		pr_err("teensy packet read!\n");
 	}
 }
@@ -307,52 +309,12 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 	pr_err("reporting axis ABS_RY as %d\n", ry);
 
 	// send button data to input device
-	for (j = 8; j < pn_teensy_input_bytes; j++) {
+	for (j = 8; j < pn_teensy_package_bytes; j++) {
 		input_report_key(dev, pn_teensy_buttons[j - 8], data[j]);
 		pr_err("reporting key %d as %d\n", (j - 8), data[j]);
 	}
 
 	input_sync(dev);
-}
-
-static void pn_teensy_read_volume(int dev_addr, unsigned char* volume_buf, int* error) {
-	int i;
-	int i2c_read_error = 0;
-	int interrupt = 0;
-	int timeout = 0;
-	int max_int_read_tries = 10;
-
-	char* result;
-
-	pn_i2c_write(dev_addr, TEENSY_READ_VOLUME, NULL, 0, &timeout);
-
-	if (!timeout) {
-		do {
-			interrupt = GPIO_READ(pn_teensy_interrupt_gpio);
-
-			if (interrupt) {
-				pn_i2c_read(dev_addr, result, 1, &i2c_read_error);
-				break;
-			}
-
-			udelay(1000);
-		} while (--max_int_read_tries);
-	}
-	else {
-		pr_err("i2c write timed out");
-	}
-
-	if (!max_int_read_tries)
-		pr_err("Gave up waiting for interrupt.\n");
-
-	if (i2c_read_error || timeout || !max_int_read_tries) {
-		*(error) = 1;
-	}
-	else {
-		*(volume_buf) = *(result);
-
-		pr_err("volume packet read!\n");
-	}
 }
 
 static void pn_set_volume(int dev_addr, unsigned char volume) {
@@ -370,8 +332,7 @@ static void pn_set_volume(int dev_addr, unsigned char volume) {
 }
 
 static void pn_process_packet(struct pn* pn) {
-	unsigned char data[pn_teensy_input_bytes];
-	unsigned char volume;
+	unsigned char data[pn_teensy_package_bytes];
 	int error = 0;
 
 	pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
@@ -379,10 +340,7 @@ static void pn_process_packet(struct pn* pn) {
 	if (!error)
 		pn_teensy_input_report(pn->inpdev, data);
 
-	pn_teensy_read_volume(pn->i2cAddresses[0], &volume, &error);
-
-	if (!error)
-		pn_set_volume(pn->i2cAddresses[1], volume);
+	pn_set_volume(pn->i2cAddresses[1], data[24]);
 }
 
 static void pn_timer(unsigned long private) {
