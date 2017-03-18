@@ -309,7 +309,7 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 	pr_err("reporting axis ABS_RY as %d\n", ry);
 
 	// send button data to input device
-	for (j = 8; j < pn_teensy_package_bytes; j++) {
+	for (j = 8; j < pn_teensy_package_bytes - 1; j++) {
 		input_report_key(dev, pn_teensy_buttons[j - 8], data[j]);
 		pr_err("reporting key %d as %d\n", (j - 8), data[j]);
 	}
