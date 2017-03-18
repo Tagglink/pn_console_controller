@@ -322,7 +322,7 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 	unsigned char read_volume;
 
 	pn_i2c_write(dev_addr, 0x05, NULL, 0, &error);
-	pn_i2c_read(dev_addr, 0x05, &read_volume, &error);
+	pn_i2c_read(dev_addr, &read_volume, 1, &error);
 
 	if (error) {
 		pr_err("Failed to read volume from TPA2016\n");
