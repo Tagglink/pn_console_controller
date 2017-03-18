@@ -319,17 +319,15 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 
 static void pn_set_volume(int dev_addr, unsigned char data) {
 	int timeout = 0;
-	signed char volume = (signed char)data;
 
-	if (volume & 0x80) { // if signed...
-		volume |= 0x10; // move sign to 5th bit
-		volume ^= 0x80; 
+	if (data & 0x20) { // if signed...
+		data ^= 0xC0; // xor with 1100 0000 to flip the 2 leftmost bits
 	}
 
-	pn_i2c_write(dev_addr, 0x05, &volume, 1, &timeout);
+	pn_i2c_write(dev_addr, 0x05, &data, 1, &timeout);
 
 	if (!timeout) {
-		pr_err("Sent %d dB volume to TPA2016 as unsigned %d\n", volume, (unsigned char)volume);
+		pr_err("Sent %d dB volume to TPA2016 as unsigned %d\n", (signed char)data, data);
 	}
 }
 
