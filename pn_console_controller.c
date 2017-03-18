@@ -318,12 +318,25 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 }
 
 static void pn_set_volume(int dev_addr, unsigned char data) {
-	int timeout = 0;
+	int error = 0;
+	unsigned char read_volume;
 
-	pn_i2c_write(dev_addr, 0x05, &data, 1, &timeout);
+	pn_i2c_write(dev_addr, 0x05, NULL, 0, &error);
+	pn_i2c_read(dev_addr, 0x05, &read_volume, &error);
 
-	if (!timeout) {
-		pr_err("Sent %d dB volume to TPA2016 as unsigned %d\n", (signed char)data, data);
+	if (error) {
+		pr_err("Failed to read volume from TPA2016\n");
+	}
+	else if (read_volume == data) {
+		pr_err("Skipped volume write to TPA2016\n");
+	}
+	else {
+		pn_i2c_write(dev_addr, 0x05, &data, 1, &error);
+
+		if (error)
+			pr_err("Write to TPA2016 failed\n");
+		else
+			pr_err("Sent %d dB volume to TPA2016 as unsigned %d\n", (signed char)data, data);
 	}
 }
 
