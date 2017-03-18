@@ -320,10 +320,6 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 static void pn_set_volume(int dev_addr, unsigned char data) {
 	int timeout = 0;
 
-	if (data & 0x20) { // if signed...
-		data ^= 0xC0; // xor with 1100 0000 to flip the 2 leftmost bits
-	}
-
 	pn_i2c_write(dev_addr, 0x05, &data, 1, &timeout);
 
 	if (!timeout) {
