@@ -319,15 +319,11 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 
 static void pn_set_volume(int dev_addr, unsigned char volume) {
 	int timeout = 0;
-	int mapped_vol = ((volume * 58) / 255) - 28;
 
-	if (mapped_vol < 0)
-		mapped_vol |= 0x10; // if negative, manually make sure the 5th bit is 1
-
-	pn_i2c_write(dev_addr, 0x05, &mapped_vol, 1, &timeout);
+	pn_i2c_write(dev_addr, 0x05, &volume, 1, &timeout);
 
 	if (!timeout) {
-		pr_err("Sent %d dB volume to TPA2016. Unmapped value: %d", mapped_vol, volume);
+		pr_err("Sent %d dB volume to TPA2016.", volume);
 	}
 }
 
