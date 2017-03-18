@@ -137,7 +137,7 @@ static const int pn_i2c_timeout_cycles = 5000;
 // Teensy axes (4): L-Stick X, L-Stick Y, R-Stick X, R-Stick Y
 //                  ABS_X,     ABS_Y,     ABS_RX,    ABS_RY
 
-// Teensy buttons (16): A, B, X, Y, L, R, Start, Select, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down, L-Trigger, R-Trigger, L-Stick press, R-Stick press, 
+// Teensy buttons (16): A, B, X, Y, L, R, Start, Select, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down, L-Trigger, R-Trigger, L-Stick press, R-Stick press
 static const short pn_teensy_buttons[] = {
 	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_TL2, BTN_TR2, BTN_THUMBL, BTN_THUMBR
 };
@@ -268,7 +268,7 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 	}
 	else {
 
-		// read the first eight bytes as axes
+		// read the first 8 bytes as axes
 		for (i = 0; i < 8; i++) {
 			data[i] = result[i];
 		}
@@ -309,7 +309,7 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 	pr_err("reporting axis ABS_RY as %d\n", ry);
 
 	// send button data to input device
-	for (j = 8; j < pn_teensy_package_bytes - 1; j++) {
+	for (j = 8; j < 24; j++) {
 		input_report_key(dev, pn_teensy_buttons[j - 8], data[j]);
 		pr_err("reporting key %d as %d\n", (j - 8), data[j]);
 	}
@@ -321,13 +321,15 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 	int timeout = 0;
 	int volume = data;
 
-	if (data & 0x80)
-		volume |= 0x10;
+	if (data & 0x80) { // if signed...
+		volume |= 0x10; // move sign to 5th bit
+		volume ^= 0x80; 
+	}
 
 	pn_i2c_write(dev_addr, 0x05, &volume, 1, &timeout);
 
 	if (!timeout) {
-		pr_err("Sent %d dB volume to TPA2016.", (signed char)data);
+		pr_err("Sent %d dB volume to TPA2016 as unsigned %d\n", (signed char)data, volume);
 	}
 }
 
