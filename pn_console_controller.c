@@ -176,8 +176,6 @@ static void wait_i2c_done(int* timeout) {
 static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short len, int* timeout) {
 	int idx;
 
-	pr_err("i2c WRITE\n");
-
 	BSC1_A = dev_addr;
 	BSC1_DLEN = len + 1; // one byte for the register address, plus the buffer length
 	BSC1_C = BSC_C_CLEAR;
@@ -196,8 +194,6 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	unsigned short bufidx;
 	int timeout = 0;
 	int interrupt = 0;
-
-	pr_err("i2c READ\n");
 
 	bufidx = 0;
 
@@ -218,7 +214,6 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	} while ((!(BSC1_S & BSC_S_DONE)));
 
 	if ((BSC1_S & BSC_S_CLKT)) {
-		pr_err("Clock was stretched! Teensy is not responding!\n");
 		*(error) = 1;
 	}
 }
@@ -240,8 +235,6 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 	*/
 	char result[package_len];
 
-	pr_err("reading teensy packet...\n");
-
 	pn_i2c_write(i2cAddress, TEENSY_READ_INPUT, NULL, 0, &timeout);
 
 	if (!timeout) {
@@ -256,12 +249,6 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 			udelay(1000);
 		} while (--max_int_read_tries);
 	}
-	else {
-		pr_err("i2c write timed out");
-	}
-
-	if (!max_int_read_tries)
-		pr_err("Gave up waiting for interrupt.\n");
 
 	if (i2c_read_error || timeout || !max_int_read_tries) {
 		*(error) = 1;
@@ -284,9 +271,19 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 		}
 
 		data[24] = result[10];
-
-		pr_err("teensy packet read!\n");
 	}
+}
+
+static int pn_constrain_number(int num, int min, int max) {
+
+  if (num < min) {
+    num = min;
+  }
+  else if (num > max) {
+    num = max;
+  }
+
+  return num;
 }
 
 static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) {
@@ -297,21 +294,20 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) 
 	int rx = (data[5] << 8) | data[4];
 	int ry = (data[7] << 8) | data[6];
 
+        lx = pn_constrain_number(lx, 0, 1023);
+        ly = pn_constrain_number(ly, 0, 1023);
+        rx = pn_constrain_number(rx, 0, 1023);
+        ry = pn_constrain_number(ry, 0, 1023);
+
 	// send joystick data to input device
 	input_report_abs(dev, ABS_X, lx);
 	input_report_abs(dev, ABS_Y, ly);
 	input_report_abs(dev, ABS_RX, rx);
 	input_report_abs(dev, ABS_RY, ry);
 
-	pr_err("reporting axis ABS_X as %d\n", lx);
-	pr_err("reporting axis ABS_Y as %d\n", ly);
-	pr_err("reporting axis ABS_RX as %d\n", rx);
-	pr_err("reporting axis ABS_RY as %d\n", ry);
-
 	// send button data to input device
 	for (j = 8; j < 24; j++) {
 		input_report_key(dev, pn_teensy_buttons[j - 8], data[j]);
-		pr_err("reporting key %d as %d\n", (j - 8), data[j]);
 	}
 
 	input_sync(dev);
@@ -324,19 +320,8 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 	pn_i2c_write(dev_addr, 0x05, NULL, 0, &error);
 	pn_i2c_read(dev_addr, &read_volume, 1, &error);
 
-	if (error) {
-		pr_err("Failed to read volume from TPA2016\n");
-	}
-	else if (read_volume == data) {
-		pr_err("Skipped volume write to TPA2016\n");
-	}
-	else {
+	if (read_volume != data && !error) {
 		pn_i2c_write(dev_addr, 0x05, &data, 1, &error);
-
-		if (error)
-			pr_err("Write to TPA2016 failed\n");
-		else
-			pr_err("Sent %d dB volume to TPA2016 as unsigned %d\n", (signed char)data, data);
 	}
 }
 
@@ -393,7 +378,7 @@ static int __init pn_setup_teensy(struct pn* pn) {
 
 	pn->inpdev = input_dev = input_allocate_device();
 	if (!input_dev) {
-		pr_err("Not enough memory for input device\n");
+		pr_err("Not enough memory for input device!\n");
 		return -ENOMEM;
 	}
 
