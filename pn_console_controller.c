@@ -104,8 +104,18 @@ MODULE_LICENSE("GPL");
 
 #define CLEAR_STATUS BSC_S_CLKT|BSC_S_ERR|BSC_S_DONE
 
+#define SPI0_BASE (PERI_BASE + 0x204000)
+
+#define SPI0_CS 	*(spi0 + 0x00)
+#define SPI0_FIFO	*(spi0 + 0x04)
+#define SPI0_CLK	*(spi0 + 0x08)
+#define SPI0_DLEN	*(spi0 + 0x0C)
+#define SPI0_LTOH	*(spi0 + 0x10)
+#define SPI0_DC		*(spi0 + 0x14)
+
 static volatile unsigned *gpio;
 static volatile unsigned *bsc1;
+static volatile unsigned *spi0;
 
 struct pn_config {
 	int args[2];
@@ -218,6 +228,14 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
+static void pn_mcp_read() {
+	
+}
+
+static void pn_mcp_write() {
+	
+}
+
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
 	int i;
 	int i2c_read_error = 0, interrupt = 0, timeout = 0;
@@ -272,6 +290,10 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 
 		data[24] = result[10];
 	}
+}
+
+static void pn_mcp_read_packet(unsigned char *data, int *error) {
+	
 }
 
 static int pn_constrain_number(int num, int min, int max) {
@@ -481,6 +503,10 @@ static int __init pn_init(void) {
 		pr_err("io remap failed\n");
 		return -EBUSY;
 	}
+	if ((spi0 = ioremap(SPI0_BASE, 0xB0)) == NULL) {
+		pr_err("io remap failed\n");
+		return -EBUSY;
+	}
 	if (pn_cfg.nargs < 2) {
 		pr_err("insufficient i2c addresses\n");
 		return -EINVAL;
@@ -499,6 +525,7 @@ static void __exit pn_exit(void) {
 
 	iounmap(gpio);
 	iounmap(bsc1);
+	iounmap(spi0);
 }
 
 module_init(pn_init);
