@@ -412,6 +412,11 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char *data) {
 	int rx = (data[4] << 8) | data[5];
 	int ry = (data[6] << 8) | data[7];
 	
+	printk("LX: %d\n", lx);
+	printk("LY: %d\n", ly);
+	printk("RX: %d\n", rx);
+	printk("RY: %d\n", ry);
+	
 	// send joystick data to input device
 	input_report_abs(dev, ABS_X, lx);
 	input_report_abs(dev, ABS_Y, ly);
@@ -440,7 +445,6 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 
 static void pn_process_packet(struct pn* pn) {
 	unsigned char data[pn_teensy_package_bytes];
-	unsigned char mcp_data[PN_MCP_CHANNELS];
 	int error = 0;
 	int vals;
 
@@ -455,7 +459,10 @@ static void pn_process_packet(struct pn* pn) {
 
 static void pn_timer(unsigned long private) {
 	struct pn* pn = (void *) private;
-	pn_process_packet(pn);
+	if (!pn->mcp_failed) {
+		pn_process_packet(pn);
+		pn->mcp_failed = 1;
+	}
 	mod_timer(&pn->timer, jiffies + PN_REFRESH_TIME);
 }
 
