@@ -291,20 +291,16 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 		while (in_idx < in_len && (SPI0_CS & SPI0_CS_TXD)) {
 			SPI0_FIFO = in_buf[in_idx];
 			in_idx++;
-			printk("write with poll counter: %d\n", poll_counter);
 		}
 		
 		while (out_idx < out_len && (SPI0_CS & SPI0_CS_RXD)) {
 			out_buf[out_idx] = SPI0_FIFO;
 			out_idx++;
-			printk("read with poll counter: %d\n", poll_counter);
 		}
 		
 		poll_counter++;
 		
 	} while (!(SPI0_CS & SPI0_CS_DONE));
-	
-	printk("polled done %d times\n", poll_counter);
 	
 	// end transfer
 	SPI0_CS &= ~(SPI0_CS_TA);
@@ -326,9 +322,9 @@ static void pn_mcp_read_packet(unsigned char *data, int *error) {
 		printk("channel %d:\n", ch);
 		pn_mcp_read(in_buf, len, out_buf, len);
 	
-		/*for (i = 0; i < len; i++) {
+		for (i = 0; i < len; i++) {
 			printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
-		}*/
+		}
 		
 		val = (out_buf[1] << 8) | out_buf[2];
 		
@@ -547,8 +543,7 @@ static int __init pn_setup_teensy(struct pn* pn) {
 	if (err)
 		goto err_free_dev;
 	
-	SPI0_CLK = (1 << 4);
-	
+	SPI0_CLK = (1 << 2);
 
 	return 0;
 
