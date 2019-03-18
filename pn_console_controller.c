@@ -307,16 +307,14 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	printk("polled done %d times\n", poll_counter);
 	
 	// end transfer
-	SPI0_CS &= (0xffffffff ^ SPI0_CS_TA);
+	SPI0_CS &= ~(SPI0_CS_TA);
 }
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
-	int ch;
+	int ch, i;
 	const int len = 3;
 	unsigned char in_buf[len];
 	unsigned char out_buf[len];
-	
-	SPI0_CLK = (1 << 8);
 	
 	for (ch = 0; ch < len; ch++) {
 		in_buf[0] = 1;
@@ -542,6 +540,9 @@ static int __init pn_setup_teensy(struct pn* pn) {
 	err = input_register_device(pn->inpdev);
 	if (err)
 		goto err_free_dev;
+	
+	SPI0_CLK = (1 << 4);
+	
 
 	return 0;
 
