@@ -271,7 +271,7 @@ static void pn_mcp_read(unsigned char *buffer) {
 		
 	// configure
 	int cs = SPI0_CS;
-	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|SPI0_CS_CPHA;
+	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
 	SPI0_CS = cs;
 	
 	for (channel = 0; channel < 6; channel++) {
