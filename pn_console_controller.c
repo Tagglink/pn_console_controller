@@ -276,16 +276,14 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	SPI0_CS |= SPI0_CS_TA;
 	
 	do {
-		while (!(SPI0_CS & SPI0_CS_TXD) && !(SPI0_CS & SPI0_CS_DONE));
-		
-		if (in_idx < in_len && (SPI0_CS & SPI0_CS_TXD)) {
+		while (in_idx < in_len && (SPI0_CS & SPI0_CS_TXD)) {
 			SPI0_FIFO = in_buf[in_idx];
 			in_idx++;
 		}
 		
 		while (!(SPI0_CS & SPI0_CS_RXD) && !(SPI0_CS & SPI0_CS_DONE));
 		
-		if (out_idx < out_len && (SPI0_CS & SPI0_CS_RXD)) {
+		while (out_idx < out_len && (SPI0_CS & SPI0_CS_RXD)) {
 			out_buf[out_idx] = SPI0_FIFO;
 			out_idx++;
 		}
@@ -299,6 +297,22 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	
 	// end transfer
 	SPI0_CS &= (0xffffffff ^ SPI0_CS_TA);
+}
+
+static void pn_mcp_read_packet(unsigned char *data, int *error) {
+	int ch;
+	const int in_len = 4;
+	const int out_len = 4;
+	unsigned char in_buf[in_len];
+	unsigned char out_buf[out_len];
+	
+	for (ch = 0; ch < 6; ch++) {
+		in_buf[0] = 1;
+		in_buf[1] = (1 << 7)|(ch << 4);
+		
+		printk("channel %d:\n", ch);
+		pn_mcp_read(in_buf, in_len, out_buf, out_len);
+	}
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
@@ -354,23 +368,6 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 		}
 
 		data[24] = result[10];
-	}
-}
-
-static void pn_mcp_read_packet(unsigned char *data, int *error) {
-	int ch;
-	int buf;
-	const int in_len = 6;
-	const int out_len = 3;
-	unsigned char in_buf[in_len];
-	unsigned char out_buf[out_len];
-	
-	for (ch = 0; ch < 6; ch++) {
-		in_buf[0] = 1;
-		in_buf[1] = (1 << 7)|(ch << 4);
-		
-		printk("channel %d:\n", ch);
-		pn_mcp_read(in_buf, in_len, out_buf, out_len);
 	}
 }
 
