@@ -312,11 +312,11 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch, i;
-	const int len = 3;
+	const int len = 5;
 	unsigned char in_buf[len];
 	unsigned char out_buf[len];
 	
-	for (ch = 0; ch < len; ch++) {
+	for (ch = 0; ch < 6; ch++) {
 		in_buf[0] = 1;
 		in_buf[1] = 128 | (ch << 4);
 		in_buf[2] = 0;
