@@ -133,8 +133,9 @@ MODULE_LICENSE("GPL");
 #define SPI0_CS_CHIP2		2
 
 // MCP3008 
+#define MCP_START	(1 << 4)
 #define MCP_SINGLE	(1 << 3)
-#define MCP_CH(ch)	((ch % 8)|MCP_SINGLE)
+#define MCP_CH(ch)	((ch % 8)|MCP_SINGLE|MCP_START)
 
 static volatile unsigned *gpio;
 static volatile unsigned *bsc1;
@@ -280,8 +281,6 @@ static int pn_mcp_read(int in) {
 	while (!(SPI0_CS & SPI0_CS_TXD));
 
 	SPI0_FIFO = in;
-	
-	printk("wrote to MCP\n");
 	
 	while (!(SPI0_CS & SPI0_CS_RXD));
 		
