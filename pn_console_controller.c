@@ -285,11 +285,13 @@ static void pn_mcp_read(unsigned char *buffer) {
 	
 		SPI0_FIFO = MCP_CH(channel);
 		
+		printk("wrote to MCP\n");
+		
 		for (bufidx = 0; bufidx < 2; bufidx++) {
 			while (!(SPI0_CS & SPI0_CS_RXD));
 			
 			buffer[channel + bufidx] = SPI0_FIFO;
-			printk("channel %d, byte %d, read %d\n", channel, bufidx, buffer[bufidx]);
+			printk("read channel %d, byte %d: %d\n", channel, bufidx, buffer[bufidx]);
 		}
 	}
 	
