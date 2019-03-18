@@ -267,21 +267,12 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 static void pn_mcp_read(unsigned char *buffer) {
 	int bufidx;
 	int channel;
-	unsigned char byte;
+	int tempbuf;
 	
 	// configure
 	int cs = SPI0_CS;
 	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
 	SPI0_CS = cs;
-	
-	int cdiv = SPI0_CLK;
-	
-	printk("starting value for cdiv: %d\n", cdiv);
-	
-	cdiv = 128;
-	SPI0_CLK = cdiv;
-	
-	printk("value of CDIV after setting to 128: %d\n", SPI0_CLK);
 	
 	for (channel = 0; channel < 6; channel++) {
 		cs = SPI0_CS;
@@ -299,13 +290,11 @@ static void pn_mcp_read(unsigned char *buffer) {
 		
 		printk("wrote to MCP\n");
 		
-		for (bufidx = 0; bufidx < 2; bufidx++) {
-			while (!(SPI0_CS & SPI0_CS_RXD));
+		while (!(SPI0_CS & SPI0_CS_RXD));
 			
-			byte = SPI0_FIFO;
-			buffer[(channel * 2) + bufidx] = byte;
-			printk("read channel %d, byte %d: %d\n", channel, bufidx, byte);
-		}
+		tempbuf = SPI0_FIFO;
+		buffer[channel] = (unsigned char)(0xff & tempbuf);
+		printk("read channel %d: %d\n", channel, tempbuf);
 	
 		while (!(SPI0_CS & SPI0_CS_DONE));
 		
