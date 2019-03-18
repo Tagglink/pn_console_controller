@@ -265,33 +265,29 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static int pn_mcp_read(int in) {
+static int pn_mcp_read(unsigned char in) {
 	int tempbuf;
 	
-	// configure
-	int cs = SPI0_CS;
-	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
-	SPI0_CS = cs;
-		
-	// start transfer
-	cs = SPI0_CS;
-	cs |= SPI0_CS_TA;
-	SPI0_CS = cs;
+	SPI0_CS |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
 	
+	// start transfer
+	SPI0_CS |= SPI0_CS_TA;
+	
+	// poll transmit buffer
 	while (!(SPI0_CS & SPI0_CS_TXD));
 
 	SPI0_FIFO = in;
 	
+	// poll read buffer
 	while (!(SPI0_CS & SPI0_CS_RXD));
 		
 	tempbuf = SPI0_FIFO;
 	
+	// poll done
 	while (!(SPI0_CS & SPI0_CS_DONE));
 	
 	// end transfer
-	cs = SPI0_CS;
-	cs &= 0xffffffff ^ SPI0_CS_TA;
-	SPI0_CS = cs;
+	SPI0_CS &= (0xffffffff ^ SPI0_CS_TA);
 	
 	return tempbuf;
 }
