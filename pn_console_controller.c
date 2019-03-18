@@ -134,7 +134,7 @@ MODULE_LICENSE("GPL");
 
 // MCP3008 
 #define MCP_SINGLE	(1 << 3)
-#define MCP_CH(ch)	(MCP_SINGLE | (ch % 8))
+#define MCP_CH(ch)	((ch % 8)|MCP_SINGLE)
 
 static volatile unsigned *gpio;
 static volatile unsigned *bsc1;
@@ -264,29 +264,38 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static void pn_mcp_read(unsigned short ch, char *buffer, int len) {
+static void pn_mcp_read(unsigned char *buffer) {
 	int bufidx = 0;
+	int channel = 0;
 		
 	// configure
 	int cs = SPI0_CS;
-	cs &= 0xffffffff ^ SPI0_CS_TA;
-	cs |= SPI0_CS_CHIP0|SPI0_CS_CPOL|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
+	cs &= 0xffffffff ^ SPI0_CS_CPOL;
+	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|SPI0_CS_CPHA;
 	SPI0_CS = cs;
 	
 	// start transfer
 	cs |= SPI0_CS_TA;
 	SPI0_CS = cs;
 	
-	do {
+	while (channel < 6) {
 		while (!(SPI0_CS & SPI0_CS_TXD));
+	
+		SPI0_FIFO = MCP_CH(channel);
 		
-		SPI0_FIFO = MCP_CH(ch);
-		
-		while (SPI0_CS & SPI0_CS_RXD && bufidx < len) {
-			buffer[bufidx] = SPI0_FIFO;
+		while ((SPI0_CS & SPI0_CS_RXD) && bufidx < 2) {
+			buffer[channel + bufidx] = SPI0_FIFO;
+			pr_err("channel %d, byte %d, read %d\n", channel, bufidx, buffer[bufidx]);
+			
+			bufidx++;
 		}
-		
-	} while (!(SPI0_CS & SPI0_CS_DONE));
+	}
+	
+	while (!(SPI0_CS & SPI0_CS_DONE));
+	
+	cs = SPI0_CS;
+	cs &= 0xffffffff ^ SPI0_CS_TA;
+	SPI0_CS = cs;
 }
 
 static void pn_mcp_write(void) {
@@ -350,17 +359,7 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 }
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
-	int i = 0;
-	char buf[2];
-	
-	for (i = 0; i < 6; i++) {
-		pn_mcp_read(i, buf, 2);
-		
-		data[i] = buf[0];
-		data[i + 1] = buf[1];
-		
-		pr_err("channel %d, byte1: %d byte2: %d\n", i, data[i], data[i + 1]);
-	}
+	pn_mcp_read(data);
 }
 
 static int pn_constrain_number(int num, int min, int max) {
