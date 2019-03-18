@@ -407,10 +407,10 @@ static int pn_constrain_number(int num, int min, int max) {
 static void pn_teensy_input_report(struct input_dev* dev, unsigned char *data) {
 	int j;
 
-	unsigned short lx = (data[0] << 8) | data[1];
-	unsigned short ly = (data[2] << 8) | data[3];
-	unsigned short rx = (data[4] << 8) | data[5];
-	unsigned short ry = (data[6] << 8) | data[7];
+	int lx = (data[0] << 8) | data[1];
+	int ly = (data[2] << 8) | data[3];
+	int rx = (data[4] << 8) | data[5];
+	int ry = (data[6] << 8) | data[7];
 	
 	// send joystick data to input device
 	input_report_abs(dev, ABS_X, lx);
