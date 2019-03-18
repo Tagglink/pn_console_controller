@@ -360,7 +360,7 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch;
 	int buf;
-	const int in_len = 2;
+	const int in_len = 6;
 	const int out_len = 3;
 	unsigned char in_buf[in_len];
 	unsigned char out_buf[out_len];
