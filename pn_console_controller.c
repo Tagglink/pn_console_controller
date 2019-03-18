@@ -312,7 +312,7 @@ static void pn_mcp_read(unsigned short *in_buf, int in_len, unsigned short *out_
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch, i;
-	const int len = 5;
+	const int len = 8;
 	unsigned short in_buf[len];
 	unsigned short out_buf[len];
 	
