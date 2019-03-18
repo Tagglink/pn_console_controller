@@ -133,9 +133,9 @@ MODULE_LICENSE("GPL");
 #define SPI0_CS_CHIP2		2
 
 // MCP3008 
-#define MCP_START	(1 << 4)
-#define MCP_SINGLE	(1 << 3)
-#define MCP_CH(ch)	((ch % 8)|MCP_SINGLE|MCP_START)
+#define MCP_START	(1 << 24)
+#define MCP_SINGLE	(1 << 23)
+#define MCP_CH(ch)	((ch % 8) << 20)
 
 static volatile unsigned *gpio;
 static volatile unsigned *bsc1;
@@ -265,7 +265,7 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static int pn_mcp_read(unsigned char in) {
+static int pn_mcp_read(int in) {
 	int tempbuf;
 	
 	SPI0_CS |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
@@ -351,10 +351,12 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch;
 	int buf;
+	int in;
 	
 	for (ch = 0; ch < 6; ch++) {
-		printk("sending %d to MCP.\n", MCP_CH(ch));
-		buf = pn_mcp_read(MCP_CH(ch));
+		in = MCP_CH(ch)|MCP_SINGLE|MCP_START;
+		printk("sending %d to MCP.\n", in);
+		buf = pn_mcp_read(in);
 		printk("channel %d: %d\n", ch, buf);
 	}
 }
