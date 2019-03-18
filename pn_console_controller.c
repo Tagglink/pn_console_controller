@@ -288,13 +288,13 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	SPI0_CS |= SPI0_CS_TA;
 	
 	do {
-		if (in_idx < in_len && (SPI0_CS & SPI0_CS_TXD)) {
+		while (in_idx < in_len && (SPI0_CS & SPI0_CS_TXD)) {
 			SPI0_FIFO = in_buf[in_idx];
 			in_idx++;
 			printk("write with poll counter: %d\n", poll_counter);
 		}
 		
-		if (out_idx < out_len && (SPI0_CS & SPI0_CS_RXD)) {
+		while (out_idx < out_len && (SPI0_CS & SPI0_CS_RXD)) {
 			out_buf[out_idx] = SPI0_FIFO;
 			out_idx++;
 			printk("read with poll counter: %d\n", poll_counter);
