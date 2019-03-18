@@ -420,7 +420,10 @@ static void pn_process_packet(struct pn* pn) {
 	int error = 0;
 
 	pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
-	//pn_mcp_read_packet(mcp_test_data, &error);
+	if (!pn->mcp_failed) {
+		pn_mcp_read_packet(mcp_test_data, &error);
+		pn->mcp_failed = 1;
+	}
 
 	if (!error) {
 		pn_teensy_input_report(pn->inpdev, data);
@@ -543,7 +546,7 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	pn->i2cAddresses[1] = addresses[1];
 
 	i2c_init();
-	//spi_init();
+	spi_init();
 
 	err = pn_setup_teensy(pn);
 	if (err)
