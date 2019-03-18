@@ -318,16 +318,16 @@ static int pn_mcp_read_packet(unsigned char *data, int channels) {
 		in_buf[1] = 128 | ((ch % 8) << 4);
 		in_buf[2] = 0;
 		
-		printk("channel %d:\n", ch);
+		//printk("channel %d:\n", ch);
 		pn_mcp_read(in_buf, len, out_buf, len);
 	
 		for (i = 0; i < len; i++) {
-			printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
+			//printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
 		}
 		
 		val = (out_buf[1] << 8) | out_buf[2];
 		
-		printk("channel %d interpretation: %d\n", ch, val);
+		//printk("channel %d interpretation: %d\n", ch, val);
 		
 		data[bufidx++] = out_buf[1];
 		data[bufidx++] = out_buf[2];
