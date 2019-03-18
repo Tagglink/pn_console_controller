@@ -177,6 +177,9 @@ struct pn {
 
 static struct pn *pn_base;
 
+static const int pn_mcp_channels = 6;
+static const int pn_package_bytes = 6;
+
 static const int pn_teensy_button_count = 16;
 static const int pn_teensy_package_bytes = 25;
 static const int pn_teensy_interrupt_gpio = 26;
@@ -305,35 +308,26 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	SPI0_CS &= ~(SPI0_CS_TA);
 }
 
-static int pn_mcp_read_packet(unsigned char *data, int channels) {
-	int ch, i;
-	int bufidx = 0;
+static unsigned short pn_mcp_read_channel(int channel) {
 	const int len = 3;
 	unsigned char in_buf[len];
 	unsigned char out_buf[len];
-	unsigned short val;
 	
-	for (ch = 0; ch < channels; ch++) {
-		in_buf[0] = 1;
-		in_buf[1] = 128 | ((ch % 8) << 4);
-		in_buf[2] = 0;
+	in_buf[0] = 1;
+	in_buf[1] = 128 | ((channel % 8) << 4);
+	in_buf[2] = 0;
 		
-		//printk("channel %d:\n", ch);
-		pn_mcp_read(in_buf, len, out_buf, len);
+	pn_mcp_read(in_buf, len, out_buf, len);
 	
-		for (i = 0; i < len; i++) {
-			//printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
-		}
-		
-		val = (out_buf[1] << 8) | out_buf[2];
-		
-		//printk("channel %d interpretation: %d\n", ch, val);
-		
-		data[bufidx++] = out_buf[1];
-		data[bufidx++] = out_buf[2];
+	return (out_buf[1] << 8) | out_buf[2];
+}
+
+static void pn_read_packet(unsigned short *mcp_data, int mcp_len) {
+	int i;
+	
+	for (i = 0; i < mcp_len; i++) {
+		mcp_data[i] = pn_mcp_read_channel(i);
 	}
-	
-	return bufidx;
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
@@ -404,13 +398,13 @@ static int pn_constrain_number(int num, int min, int max) {
   return num;
 }
 
-static void pn_teensy_input_report(struct input_dev* dev, unsigned char *data) {
+static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data) {
 	int j;
 
-	int lx = (data[0] << 8) | data[1];
-	int ly = (data[2] << 8) | data[3];
-	int rx = (data[4] << 8) | data[5];
-	int ry = (data[6] << 8) | data[7];
+	int lx = mcp_data[0];
+	int ly = mcp_data[1];
+	int rx = mcp_data[2];
+	int ry = mcp_data[3];
 	
 	// send joystick data to input device
 	input_report_abs(dev, ABS_X, lx);
@@ -419,9 +413,9 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char *data) {
 	input_report_abs(dev, ABS_RY, ry);
 
 	// send button data to input device
-	for (j = 8; j < 24; j++) {
+	/*for (j = 8; j < 24; j++) {
 		input_report_key(dev, pn_teensy_buttons[j - 8], data[j]);
-	}
+	}*/
 
 	input_sync(dev);
 }
@@ -439,14 +433,12 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 }
 
 static void pn_process_packet(struct pn* pn) {
-	unsigned char data[pn_teensy_package_bytes];
-	int error = 0;
-	int vals;
+	unsigned char mcp_data[pn_mcp_channels];
 
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
-	vals = pn_mcp_read_packet(data, PN_MCP_CHANNELS);
-	pn_teensy_input_report(pn->inpdev, data);
+	vals = pn_read_packet(mcp_data, pn_package_bytes);
+	pn_input_report(pn->inpdev, mcp_data);
 	
 	//pn_set_volume(pn->i2cAddresses[1], data[24]);
 }
