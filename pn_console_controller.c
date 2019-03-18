@@ -264,48 +264,37 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static void pn_mcp_read(unsigned char *buffer) {
-	int bufidx;
-	int channel;
+static int pn_mcp_read(int in) {
 	int tempbuf;
 	
 	// configure
 	int cs = SPI0_CS;
 	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
 	SPI0_CS = cs;
+		
+	// start transfer
+	cs = SPI0_CS;
+	cs |= SPI0_CS_TA;
+	SPI0_CS = cs;
 	
-	for (channel = 0; channel < 6; channel++) {
-		// clear fifo
-		cs = SPI0_CS;
-		cs |= SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
-		SPI0_CS = cs;
-		
-		// start transfer
-		cs = SPI0_CS;
-		cs |= SPI0_CS_TA;
-		SPI0_CS = cs;
-		
-		while (!(SPI0_CS & SPI0_CS_TXD));
+	while (!(SPI0_CS & SPI0_CS_TXD));
+
+	SPI0_FIFO = in;
 	
-		SPI0_FIFO = MCP_CH(channel);
+	printk("wrote to MCP\n");
+	
+	while (!(SPI0_CS & SPI0_CS_RXD));
 		
-		printk("wrote to MCP\n");
-		
-		while (!(SPI0_CS & SPI0_CS_RXD));
-			
-		tempbuf = SPI0_FIFO;
-		buffer[channel] = (unsigned char)(0xff & tempbuf);
-		printk("read channel %d: %d\n", channel, tempbuf);
-		
-		while (!(SPI0_CS & SPI0_CS_DONE));
-		
-		printk("CS register before setting TA bit to 0: %d\n", SPI0_CS);
-		// end transfer
-		cs = SPI0_CS;
-		cs &= 0xffffffff ^ SPI0_CS_TA;
-		SPI0_CS = cs;
-		printk("CS register after setting TA bit to 0: %d\n", SPI0_CS);
-	}
+	tempbuf = SPI0_FIFO;
+	
+	while (!(SPI0_CS & SPI0_CS_DONE));
+	
+	// end transfer
+	cs = SPI0_CS;
+	cs &= 0xffffffff ^ SPI0_CS_TA;
+	SPI0_CS = cs;
+	
+	return tempbuf;
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
@@ -365,7 +354,14 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 }
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
-	pn_mcp_read(data);
+	int ch;
+	int buf;
+	
+	for (ch = 0; ch < 6; ch++) {
+		printk("sending %d to MCP.\n", MCP_CH(ch));
+		buf = pn_mcp_read(MCP_CH(ch));
+		printk("channel %d: %d\n", ch, buf);
+	}
 }
 
 static int pn_constrain_number(int num, int min, int max) {
