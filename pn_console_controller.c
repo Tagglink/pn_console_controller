@@ -107,11 +107,11 @@ MODULE_LICENSE("GPL");
 #define SPI0_BASE (PERI_BASE + 0x204000)
 
 #define SPI0_CS 	*(spi0 + 0x00)
-#define SPI0_FIFO	*(spi0 + 0x04)
-#define SPI0_CLK	*(spi0 + 0x08)
-#define SPI0_DLEN	*(spi0 + 0x0C)
-#define SPI0_LTOH	*(spi0 + 0x10)
-#define SPI0_DC		*(spi0 + 0x14)
+#define SPI0_FIFO	*(spi0 + 0x01)
+#define SPI0_CLK	*(spi0 + 0x02)
+#define SPI0_DLEN	*(spi0 + 0x03)
+#define SPI0_LTOH	*(spi0 + 0x04)
+#define SPI0_DC		*(spi0 + 0x05)
 
 #define SPI0_CS_RXF			(1 << 20)
 #define SPI0_CS_RXR 		(1 << 19)
@@ -268,7 +268,7 @@ static void pn_mcp_read(unsigned char *buffer) {
 	int bufidx;
 	int channel;
 	unsigned char byte;
-		
+	
 	// configure
 	int cs = SPI0_CS;
 	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
