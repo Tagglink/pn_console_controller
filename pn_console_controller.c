@@ -164,6 +164,8 @@ MODULE_PARM_DESC(args, "0: teensy i2c address, 1: TPA2016D2 i2c address");
 
 #define PN_REFRESH_TIME HZ/100
 
+#define PN_MCP_CHANNELS 6
+
 struct pn {
 	struct input_dev* inpdev;
 	struct timer_list timer;
@@ -280,7 +282,6 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	int in_idx = 0;
 	int out_idx = 0;
 	int i;
-	int poll_counter = 0;
 	
 	SPI0_CS |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|SPI0_CS_CPHA;
 	
@@ -298,25 +299,23 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 			out_idx++;
 		}
 		
-		poll_counter++;
-		
 	} while (!(SPI0_CS & SPI0_CS_DONE));
 	
 	// end transfer
 	SPI0_CS &= ~(SPI0_CS_TA);
 }
 
-static void pn_mcp_read_packet(unsigned char *data, int *error) {
+static int pn_mcp_read_packet(unsigned char *data, int channels) {
 	int ch, i;
+	int bufidx = 0;
 	const int len = 3;
 	unsigned char in_buf[len];
 	unsigned char out_buf[len];
 	unsigned short val;
 	
-	
-	for (ch = 0; ch < 8; ch++) {
+	for (ch = 0; ch < channels; ch++) {
 		in_buf[0] = 1;
-		in_buf[1] = 128 | (ch << 4);
+		in_buf[1] = 128 | ((ch % 8) << 4);
 		in_buf[2] = 0;
 		
 		printk("channel %d:\n", ch);
@@ -329,7 +328,12 @@ static void pn_mcp_read_packet(unsigned char *data, int *error) {
 		val = (out_buf[1] << 8) | out_buf[2];
 		
 		printk("channel %d interpretation: %d\n", ch, val);
+		
+		data[bufidx++] = out_buf[1];
+		data[bufidx++] = out_buf[2];
 	}
+	
+	return bufidx;
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
@@ -400,19 +404,14 @@ static int pn_constrain_number(int num, int min, int max) {
   return num;
 }
 
-static void pn_teensy_input_report(struct input_dev* dev, unsigned char * data) {
+static void pn_teensy_input_report(struct input_dev* dev, unsigned char *data) {
 	int j;
 
-	int lx = (data[1] << 8) | data[0];
-	int ly = (data[3] << 8) | data[2];
-	int rx = (data[5] << 8) | data[4];
-	int ry = (data[7] << 8) | data[6];
-
-        lx = pn_constrain_number(lx, 0, 1023);
-        ly = pn_constrain_number(ly, 0, 1023);
-        rx = pn_constrain_number(rx, 0, 1023);
-        ry = pn_constrain_number(ry, 0, 1023);
-
+	unsigned short lx = (data[0] << 8) | data[1];
+	unsigned short ly = (data[2] << 8) | data[3];
+	unsigned short rx = (data[4] << 8) | data[5];
+	unsigned short ry = (data[6] << 8) | data[7];
+	
 	// send joystick data to input device
 	input_report_abs(dev, ABS_X, lx);
 	input_report_abs(dev, ABS_Y, ly);
@@ -441,17 +440,15 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 
 static void pn_process_packet(struct pn* pn) {
 	unsigned char data[pn_teensy_package_bytes];
-	unsigned char mcp_test_data[12];
+	unsigned char mcp_data[PN_MCP_CHANNELS];
 	int error = 0;
+	int vals;
 
 	pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
-	if (!pn->mcp_failed) {
-		pn_mcp_read_packet(mcp_test_data, &error);
-		pn->mcp_failed = 1;
-	}
+	vals = pn_mcp_read_packet(data, PN_MCP_CHANNELS);
 
 	if (!error) {
-		pn_teensy_input_report(pn->inpdev, data);
+		pn_teensy_input_report(pn->inpdev, mcp_data);
 		pn_set_volume(pn->i2cAddresses[1], data[24]);
 	}
 }
