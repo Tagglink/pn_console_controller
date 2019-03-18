@@ -312,13 +312,13 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch, i;
-	const int len = 8;
+	const int len = 3;
 	unsigned char in_buf[len];
 	unsigned char out_buf[len];
 	unsigned short val;
 	
 	
-	for (ch = 0; ch < 1; ch++) {
+	for (ch = 0; ch < 8; ch++) {
 		in_buf[0] = 1;
 		in_buf[1] = 128 | (ch << 4);
 		in_buf[2] = 0;
@@ -326,9 +326,9 @@ static void pn_mcp_read_packet(unsigned char *data, int *error) {
 		printk("channel %d:\n", ch);
 		pn_mcp_read(in_buf, len, out_buf, len);
 	
-		for (i = 0; i < len; i++) {
+		/*for (i = 0; i < len; i++) {
 			printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
-		}
+		}*/
 		
 		val = (out_buf[1] << 8) | out_buf[2];
 		
