@@ -271,7 +271,7 @@ static void pn_mcp_read(unsigned int *in_buf, int in_len, unsigned int *out_buf,
 	int i;
 	int poll_counter = 0;
 	
-	SPI0_CS |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|MCP_CS_CPHA;
+	SPI0_CS |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|SPI0_CS_CPHA;
 	
 	// start transfer
 	SPI0_CS |= SPI0_CS_TA;
