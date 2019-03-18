@@ -330,7 +330,7 @@ static void pn_mcp_read_packet(unsigned char *data, int *error) {
 			printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
 		}
 		
-		val = (out_buf[0] << 8) | out_buf[1];
+		val = (out_buf[1] << 8) | out_buf[2];
 		
 		printk("channel %d interpretation: %d\n", ch, val);
 	}
