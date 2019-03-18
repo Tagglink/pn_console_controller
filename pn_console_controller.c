@@ -113,6 +113,29 @@ MODULE_LICENSE("GPL");
 #define SPI0_LTOH	*(spi0 + 0x10)
 #define SPI0_DC		*(spi0 + 0x14)
 
+#define SPI0_CS_RXF			(1 << 20)
+#define SPI0_CS_RXR 		(1 << 19)
+#define SPI0_CS_TXD 		(1 << 18)
+#define SPI0_CS_RXD			(1 << 17)
+#define SPI0_CS_DONE 		(1 << 16)
+
+#define SPI0_CS_INTR 		(1 << 10)
+#define SPI0_CS_INTD 		(1 << 9)
+
+#define SPI0_CS_TA			(1 << 7)
+#define SPI0_CS_CSPOL		(1 << 6)
+#define SPI0_CS_CLEAR_RX 	(1 << 5)
+#define SPI0_CS_CLEAR_TX 	(1 << 4)
+#define SPI0_CS_CPOL		(1 << 3)
+#define SPI0_CS_CPHA		(1 << 2)
+#define SPI0_CS_CHIP0		0
+#define SPI0_CS_CHIP1		1
+#define SPI0_CS_CHIP2		2
+
+// MCP3008 
+#define MCP_SINGLE	(1 << 3)
+#define MCP_CH(ch)	(MCP_SINGLE | (ch % 8))
+
 static volatile unsigned *gpio;
 static volatile unsigned *bsc1;
 static volatile unsigned *spi0;
@@ -172,6 +195,10 @@ static void i2c_init(void) {
 	SET_GPIO_ALT(3, 0);
 }
 
+static void spi_init(void) {
+	
+}
+
 static void wait_i2c_done(int* timeout) {
 	int timeout_counter = pn_i2c_timeout_cycles;
 	while ((!((BSC1_S)& BSC_S_DONE)) && --timeout_counter) {
@@ -228,11 +255,32 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static void pn_mcp_read() {
+static void pn_mcp_read(unsigned short ch, char *buffer, int len) {
+	int bufidx = 0;
+		
+	// configure
+	int cs = SPI0_CS;
+	cs &= 0xffffffff ^ SPI0_CS_TA;
+	cs |= SPI0_CS_CHIP0|SPI0_CS_CPOL|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
+	SPI0_CS = cs;
 	
+	// start transfer
+	cs |= MCP_CS_TA;
+	SPI0_CS = cs;
+	
+	do {
+		while (!(SPI0_CS & SPI0_CS_TXD));
+		
+		SPI0_FIFO = MCP_CH(ch);
+		
+		while (SPI0_CS & SPI0_CS_RXD && bufidx < len) {
+			buffer[bufidx] = SPI0_FIFO;
+		}
+		
+	} while (!(SPI0_CS & SPI0_CS_DONE));
 }
 
-static void pn_mcp_write() {
+static void pn_mcp_write(void) {
 	
 }
 
@@ -293,7 +341,15 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 }
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
-	
+	for (int i = 0; i < 6; i++) {
+		char buf[2];
+		pn_mcp_read(i, buf, 2);
+		
+		data[i] = buf[0];
+		data[i + 1] = buf[1];
+		
+		pr_err("channel %d, byte1: %d byte2: %d\n", i, data[i], data[i + 1]);
+	}
 }
 
 static int pn_constrain_number(int num, int min, int max) {
@@ -349,9 +405,11 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 
 static void pn_process_packet(struct pn* pn) {
 	unsigned char data[pn_teensy_package_bytes];
+	unsigned char mcp_test_data[12];
 	int error = 0;
 
 	pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
+	pn_mcp_read_packet(data, &error);
 
 	if (!error) {
 		pn_teensy_input_report(pn->inpdev, data);
