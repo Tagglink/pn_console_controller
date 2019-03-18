@@ -280,11 +280,12 @@ static int pn_mcp_read(int in) {
 	
 	// poll read buffer
 	while (!(SPI0_CS & SPI0_CS_RXD));
-		
-	tempbuf = SPI0_FIFO;
+	
+	do {
+		tempbuf = SPI0_FIFO;
 	
 	// poll done
-	while (!(SPI0_CS & SPI0_CS_DONE));
+	} while ((SPI0_CS & SPI0_CS_RXD) || !(SPI0_CS & SPI0_CS_DONE));
 	
 	// end transfer
 	SPI0_CS &= (0xffffffff ^ SPI0_CS_TA);
