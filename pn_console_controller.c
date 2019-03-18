@@ -286,7 +286,7 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 			out_idx++;
 		}
 		
-		// poll done
+		printk("passed polls\n");
 	} while (!(SPI0_CS & SPI0_CS_DONE));
 	
 	for (i = 0; i < out_idx; i++) {
@@ -299,8 +299,8 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch;
-	const int in_len = 4;
-	const int out_len = 4;
+	const int in_len = 32;
+	const int out_len = 32;
 	unsigned char in_buf[in_len];
 	unsigned char out_buf[out_len];
 	
