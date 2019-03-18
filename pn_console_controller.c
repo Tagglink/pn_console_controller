@@ -38,6 +38,17 @@
 #include <linux/ioport.h>
 #include <asm/io.h>
 
+#include <linux/spinlock.h>
+#include <linux/clk.h>
+#include <linux/err.h>
+#include <linux/platform_device.h>
+#include <linux/io.h>
+#include <linux/spi/spi.h>
+#include <linux/interrupt.h>
+#include <linux/log2.h>
+#include <linux/sched.h>
+#include <linux/wait.h>
+
 
 MODULE_AUTHOR("Tomas Granlund");
 MODULE_DESCRIPTION("Raspberry-Pi Console Controller Driver");
