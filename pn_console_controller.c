@@ -267,29 +267,23 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 static void pn_mcp_read(unsigned char *buffer) {
 	int bufidx;
 	int channel;
+	unsigned char byte;
 		
 	// configure
 	int cs = SPI0_CS;
-	printk("CS Register before config: %d\n", cs);
-	
-	cs &= 0xffffffff ^ SPI0_CS_CPOL;
 	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|SPI0_CS_CPHA;
 	SPI0_CS = cs;
 	
-	printk("CS Register after config: %d\n", SPI0_CS);
-	
-	// start transfer
-	cs |= SPI0_CS_TA;
-	SPI0_CS = cs;
-	
-	printk("CS Register after setting TA bit: %d\n", SPI0_CS);
-	
-	cs |= SPI0_CS_CPOL;
-	SPI0_CS = cs;
-	
-	printk("CS Register after re-setting CPOL bit to 1: %d\n", SPI0_CS);
-	
 	for (channel = 0; channel < 6; channel++) {
+		cs = SPI0_CS;
+		cs |= SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
+		SPI0_CS = cs;
+		
+		// start transfer
+		cs = SPI0_CS;
+		cs |= SPI0_CS_TA;
+		SPI0_CS = cs;
+		
 		while (!(SPI0_CS & SPI0_CS_TXD));
 	
 		SPI0_FIFO = MCP_CH(channel);
@@ -299,16 +293,17 @@ static void pn_mcp_read(unsigned char *buffer) {
 		for (bufidx = 0; bufidx < 2; bufidx++) {
 			while (!(SPI0_CS & SPI0_CS_RXD));
 			
-			buffer[channel + bufidx] = SPI0_FIFO;
-			printk("read channel %d, byte %d: %d\n", channel, bufidx, buffer[bufidx]);
+			byte = SPI0_FIFO;
+			buffer[(channel * 2) + bufidx] = byte;
+			printk("read channel %d, byte %d: %d\n", channel, bufidx, byte);
 		}
+	
+		while (!(SPI0_CS & SPI0_CS_DONE));
+		
+		cs = SPI0_CS;
+		cs &= 0xffffffff ^ SPI0_CS_TA;
+		SPI0_CS = cs;
 	}
-	
-	while (!(SPI0_CS & SPI0_CS_DONE));
-	
-	cs = SPI0_CS;
-	cs &= 0xffffffff ^ SPI0_CS_TA;
-	SPI0_CS = cs;
 }
 
 static void pn_mcp_write(void) {
