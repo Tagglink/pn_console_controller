@@ -276,7 +276,7 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static void pn_mcp_read(unsigned short *in_buf, int in_len, unsigned short *out_buf, int out_len) {
+static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_buf, int out_len) {
 	int in_idx = 0;
 	int out_idx = 0;
 	int i;
@@ -313,8 +313,10 @@ static void pn_mcp_read(unsigned short *in_buf, int in_len, unsigned short *out_
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch, i;
 	const int len = 8;
-	unsigned short in_buf[len];
-	unsigned short out_buf[len];
+	unsigned char in_buf[len];
+	unsigned char out_buf[len];
+	unsigned short val;
+	
 	
 	for (ch = 0; ch < 1; ch++) {
 		in_buf[0] = 1;
@@ -327,6 +329,10 @@ static void pn_mcp_read_packet(unsigned char *data, int *error) {
 		for (i = 0; i < len; i++) {
 			printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
 		}
+		
+		val = (out_buf[0] << 8) | out_buf[1];
+		
+		printk("channel %d interpretation: %d\n", ch, val);
 	}
 }
 
