@@ -282,13 +282,17 @@ static int pn_mcp_read(int in) {
 	SPI0_FIFO = in;
 	
 	// poll read buffer
-	while (!(SPI0_CS & SPI0_CS_RXD));
 	
 	do {
-		tempbuf[bufidx] = SPI0_FIFO;
-		bufidx++;
+		while (!(SPI0_CS & SPI0_CS_RXD) && !(SPI0_CS & SPI0_CS_DONE));
+		
+		if ((SPI0_CS & SPI0_CS_RXD)) {
+			tempbuf[bufidx] = SPI0_FIFO;
+			bufidx++;
+		}
+		
 		// poll done
-	} while ((SPI0_CS & SPI0_CS_RXD) || !(SPI0_CS & SPI0_CS_DONE));
+	} while (!(SPI0_CS & SPI0_CS_DONE));
 	
 	for (i = 0; i < bufidx; i++) {
 		printk("result%d: %d\n", i, tempbuf[i]);
