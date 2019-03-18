@@ -448,13 +448,12 @@ static void pn_process_packet(struct pn* pn) {
 	int error = 0;
 	int vals;
 
-	pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
+	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
+	
 	vals = pn_mcp_read_packet(data, PN_MCP_CHANNELS);
-
-	if (!error) {
-		pn_teensy_input_report(pn->inpdev, data);
-		pn_set_volume(pn->i2cAddresses[1], data[24]);
-	}
+	pn_teensy_input_report(pn->inpdev, data);
+	
+	//pn_set_volume(pn->i2cAddresses[1], data[24]);
 }
 
 static void pn_timer(unsigned long private) {
