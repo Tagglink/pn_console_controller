@@ -310,6 +310,8 @@ static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	unsigned char in_buf[in_len];
 	unsigned char out_buf[out_len];
 	
+	SPI0_CLK = 2;
+	
 	for (ch = 0; ch < 6; ch++) {
 		in_buf[0] = 1;
 		in_buf[1] = 128;
