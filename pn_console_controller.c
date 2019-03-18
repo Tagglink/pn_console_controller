@@ -158,6 +158,7 @@ struct pn {
 	struct mutex mutex;
 	int used;
 	int i2cAddresses[2];
+	int mcp_failed;
 };
 
 static struct pn *pn_base;
@@ -419,7 +420,7 @@ static void pn_process_packet(struct pn* pn) {
 	int error = 0;
 
 	pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
-	pn_mcp_read_packet(mcp_test_data, &error);
+	//pn_mcp_read_packet(mcp_test_data, &error);
 
 	if (!error) {
 		pn_teensy_input_report(pn->inpdev, data);
@@ -465,6 +466,8 @@ static int __init pn_setup_teensy(struct pn* pn) {
 	int timeout;
 	char phys[32];
 	unsigned char tx = 0x00;
+	
+	pn->mcp_failed = 0;
 
 	pn->inpdev = input_dev = input_allocate_device();
 	if (!input_dev) {
@@ -540,7 +543,7 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	pn->i2cAddresses[1] = addresses[1];
 
 	i2c_init();
-	spi_init();
+	//spi_init();
 
 	err = pn_setup_teensy(pn);
 	if (err)
