@@ -139,9 +139,9 @@ MODULE_LICENSE("GPL");
 #define SPI0_CS_CLEAR_TX 	(1 << 4)
 #define SPI0_CS_CPOL		(1 << 3)
 #define SPI0_CS_CPHA		(1 << 2)
-#define SPI0_CS_CHIP0		0
+#define SPI0_CS_CHIP2		2 
 #define SPI0_CS_CHIP1		1
-#define SPI0_CS_CHIP2		2
+#define SPI0_CS_CHIP0		0
 
 // MCP3008 
 #define MCP_START	(1 << 24)
@@ -448,7 +448,7 @@ static void pn_process_packet(struct pn* pn) {
 	vals = pn_mcp_read_packet(data, PN_MCP_CHANNELS);
 
 	if (!error) {
-		pn_teensy_input_report(pn->inpdev, mcp_data);
+		pn_teensy_input_report(pn->inpdev, data);
 		pn_set_volume(pn->i2cAddresses[1], data[24]);
 	}
 }
