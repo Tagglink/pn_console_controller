@@ -265,7 +265,7 @@ static void pn_mcp_read(unsigned short ch, char *buffer, int len) {
 	SPI0_CS = cs;
 	
 	// start transfer
-	cs |= MCP_CS_TA;
+	cs |= SPI0_CS_TA;
 	SPI0_CS = cs;
 	
 	do {
@@ -341,8 +341,10 @@ static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* erro
 }
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
-	for (int i = 0; i < 6; i++) {
-		char buf[2];
+	int i = 0;
+	char buf[2];
+	
+	for (i = 0; i < 6; i++) {
 		pn_mcp_read(i, buf, 2);
 		
 		data[i] = buf[0];
