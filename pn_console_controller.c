@@ -290,22 +290,19 @@ static void pn_mcp_read(unsigned char *buffer) {
 		
 		printk("wrote to MCP\n");
 		
-		while (!(SPI0_CS & SPI0_CS_RXD));
+		do {
+			while (!(SPI0_CS & SPI0_CS_RXD));
 			
-		tempbuf = SPI0_FIFO;
-		buffer[channel] = (unsigned char)(0xff & tempbuf);
-		printk("read channel %d: %d\n", channel, tempbuf);
+			tempbuf = SPI0_FIFO;
+			buffer[channel] = (unsigned char)(0xff & tempbuf);
+			printk("read channel %d: %d\n", channel, tempbuf);
 	
-		while (!(SPI0_CS & SPI0_CS_DONE));
+		} while (!(SPI0_CS & SPI0_CS_DONE));
 		
 		cs = SPI0_CS;
 		cs &= 0xffffffff ^ SPI0_CS_TA;
 		SPI0_CS = cs;
 	}
-}
-
-static void pn_mcp_write(void) {
-	
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
