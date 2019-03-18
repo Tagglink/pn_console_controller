@@ -265,8 +265,8 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 }
 
 static void pn_mcp_read(unsigned char *buffer) {
-	int bufidx = 0;
-	int channel = 0;
+	int bufidx;
+	int channel;
 		
 	// configure
 	int cs = SPI0_CS;
@@ -280,19 +280,17 @@ static void pn_mcp_read(unsigned char *buffer) {
 	
 	printk("starting transfer to MCP\n");
 	
-	while (channel < 6) {
+	for (channel = 0; channel < 6; channel++) {
 		while (!(SPI0_CS & SPI0_CS_TXD));
 	
 		SPI0_FIFO = MCP_CH(channel);
 		
-		while ((SPI0_CS & SPI0_CS_RXD) && bufidx < 2) {
+		for (bufidx = 0; bufidx < 2; bufidx++) {
+			while (!(SPI0_CS & SPI0_CS_RXD));
+			
 			buffer[channel + bufidx] = SPI0_FIFO;
 			printk("channel %d, byte %d, read %d\n", channel, bufidx, buffer[bufidx]);
-			
-			bufidx++;
 		}
-		
-		channel++;
 	}
 	
 	while (!(SPI0_CS & SPI0_CS_DONE));
