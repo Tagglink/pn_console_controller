@@ -270,15 +270,24 @@ static void pn_mcp_read(unsigned char *buffer) {
 		
 	// configure
 	int cs = SPI0_CS;
+	printk("CS Register before config: %d\n", cs);
+	
 	cs &= 0xffffffff ^ SPI0_CS_CPOL;
 	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|SPI0_CS_CPHA;
 	SPI0_CS = cs;
+	
+	printk("CS Register after config: %d\n", SPI0_CS);
 	
 	// start transfer
 	cs |= SPI0_CS_TA;
 	SPI0_CS = cs;
 	
-	printk("starting transfer to MCP\n");
+	printk("CS Register after setting TA bit: %d\n", SPI0_CS);
+	
+	cs |= SPI0_CS_CPOL;
+	SPI0_CS = cs;
+	
+	printk("CS Register after re-setting CPOL bit to 1: %d\n", SPI0_CS);
 	
 	for (channel = 0; channel < 6; channel++) {
 		while (!(SPI0_CS & SPI0_CS_TXD));
