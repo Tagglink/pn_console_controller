@@ -458,10 +458,7 @@ static void pn_process_packet(struct pn* pn) {
 
 static void pn_timer(unsigned long private) {
 	struct pn* pn = (void *) private;
-	if (!pn->mcp_failed) {
-		pn_process_packet(pn);
-		pn->mcp_failed = 1;
-	}
+	pn_process_packet(pn);
 	mod_timer(&pn->timer, jiffies + PN_REFRESH_TIME);
 }
 
