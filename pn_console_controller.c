@@ -278,6 +278,8 @@ static void pn_mcp_read(unsigned char *buffer) {
 	cs |= SPI0_CS_TA;
 	SPI0_CS = cs;
 	
+	printk("starting transfer to MCP\n");
+	
 	while (channel < 6) {
 		while (!(SPI0_CS & SPI0_CS_TXD));
 	
