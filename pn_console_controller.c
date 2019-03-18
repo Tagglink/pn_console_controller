@@ -269,6 +269,7 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	int in_idx = 0;
 	int out_idx = 0;
 	int i;
+	int poll_counter = 0;
 	
 	SPI0_CS |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
 	
@@ -279,15 +280,20 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 		while (in_idx < in_len && (SPI0_CS & SPI0_CS_TXD)) {
 			SPI0_FIFO = in_buf[in_idx];
 			in_idx++;
+			printk("write with poll counter: %d\n", poll_counter);
 		}
 		
 		while (out_idx < out_len && (SPI0_CS & SPI0_CS_RXD)) {
 			out_buf[out_idx] = SPI0_FIFO;
 			out_idx++;
+			printk("read with poll counter: %d\n", poll_counter);
 		}
 		
-		printk("passed polls\n");
+		poll_counter++;
+		
 	} while (!(SPI0_CS & SPI0_CS_DONE));
+	
+	printk("polled done %d times\n", poll_counter);
 	
 	for (i = 0; i < out_idx; i++) {
 		printk("result%d: %d\n", i, out_buf[i]);
