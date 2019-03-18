@@ -265,7 +265,7 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static int pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_buf, int out_len) {
+static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_buf, int out_len) {
 	int in_idx = 0;
 	int out_idx = 0;
 	int i;
@@ -299,8 +299,6 @@ static int pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_buf
 	
 	// end transfer
 	SPI0_CS &= (0xffffffff ^ SPI0_CS_TA);
-	
-	return tempbuf[0];
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
