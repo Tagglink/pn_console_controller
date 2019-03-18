@@ -433,11 +433,11 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 }
 
 static void pn_process_packet(struct pn* pn) {
-	unsigned char mcp_data[pn_mcp_channels];
+	unsigned short mcp_data[pn_mcp_channels];
 
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
-	vals = pn_read_packet(mcp_data, pn_package_bytes);
+	pn_read_packet(mcp_data, pn_package_bytes);
 	pn_input_report(pn->inpdev, mcp_data);
 	
 	//pn_set_volume(pn->i2cAddresses[1], data[24]);
