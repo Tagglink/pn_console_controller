@@ -412,11 +412,6 @@ static void pn_teensy_input_report(struct input_dev* dev, unsigned char *data) {
 	int rx = (data[4] << 8) | data[5];
 	int ry = (data[6] << 8) | data[7];
 	
-	printk("LX: %d\n", lx);
-	printk("LY: %d\n", ly);
-	printk("RX: %d\n", rx);
-	printk("RY: %d\n", ry);
-	
 	// send joystick data to input device
 	input_report_abs(dev, ABS_X, lx);
 	input_report_abs(dev, ABS_Y, ly);
