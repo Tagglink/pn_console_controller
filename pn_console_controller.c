@@ -275,6 +275,7 @@ static void pn_mcp_read(unsigned char *buffer) {
 	SPI0_CS = cs;
 	
 	for (channel = 0; channel < 6; channel++) {
+		// clear fifo
 		cs = SPI0_CS;
 		cs |= SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
 		SPI0_CS = cs;
@@ -290,18 +291,20 @@ static void pn_mcp_read(unsigned char *buffer) {
 		
 		printk("wrote to MCP\n");
 		
-		do {
-			while (!(SPI0_CS & SPI0_CS_RXD));
+		while (!(SPI0_CS & SPI0_CS_RXD));
 			
-			tempbuf = SPI0_FIFO;
-			buffer[channel] = (unsigned char)(0xff & tempbuf);
-			printk("read channel %d: %d\n", channel, tempbuf);
-	
-		} while (!(SPI0_CS & SPI0_CS_DONE));
+		tempbuf = SPI0_FIFO;
+		buffer[channel] = (unsigned char)(0xff & tempbuf);
+		printk("read channel %d: %d\n", channel, tempbuf);
 		
+		while (!(SPI0_CS & SPI0_CS_DONE));
+		
+		printk("CS register before setting TA bit to 0: %d\n", SPI0_CS);
+		// end transfer
 		cs = SPI0_CS;
 		cs &= 0xffffffff ^ SPI0_CS_TA;
 		SPI0_CS = cs;
+		printk("CS register after setting TA bit to 0: %d\n", SPI0_CS);
 	}
 }
 
