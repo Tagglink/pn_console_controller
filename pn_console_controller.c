@@ -274,6 +274,15 @@ static void pn_mcp_read(unsigned char *buffer) {
 	cs |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
 	SPI0_CS = cs;
 	
+	int cdiv = SPI0_CLK;
+	
+	printk("starting value for cdiv: %d\n", cdiv);
+	
+	cdiv = 128;
+	SPI0_CLK = cdiv;
+	
+	printk("value of CDIV after setting to 128: %d\n", SPI0_CLK);
+	
 	for (channel = 0; channel < 6; channel++) {
 		cs = SPI0_CS;
 		cs |= SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX;
