@@ -543,7 +543,7 @@ static int __init pn_setup_teensy(struct pn* pn) {
 	if (err)
 		goto err_free_dev;
 	
-	SPI0_CLK = (1 << 2);
+	SPI0_CLK = (1 << 6);
 
 	return 0;
 
