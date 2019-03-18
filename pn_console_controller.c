@@ -306,7 +306,7 @@ static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	
 	for (ch = 0; ch < 6; ch++) {
 		in_buf[0] = 1;
-		in_buf[1] = (1 << 7)|(ch << 4);
+		in_buf[1] = 128;
 		
 		printk("channel %d:\n", ch);
 		pn_mcp_read(in_buf, in_len, out_buf, out_len);
