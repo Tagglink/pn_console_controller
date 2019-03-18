@@ -265,7 +265,7 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 	}
 }
 
-static void pn_mcp_read(unsigned int *in_buf, int in_len, unsigned int *out_buf, int out_len) {
+static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_buf, int out_len) {
 	int in_idx = 0;
 	int out_idx = 0;
 	int i;
@@ -295,27 +295,30 @@ static void pn_mcp_read(unsigned int *in_buf, int in_len, unsigned int *out_buf,
 	
 	printk("polled done %d times\n", poll_counter);
 	
-	for (i = 0; i < out_idx; i++) {
-		printk("result%d: %d\n", i, out_buf[i]);
-	}
-	
 	// end transfer
 	SPI0_CS &= (0xffffffff ^ SPI0_CS_TA);
 }
 
 static void pn_mcp_read_packet(unsigned char *data, int *error) {
 	int ch;
-	const int len = 1;
-	unsigned int in_buf[len];
-	unsigned int out_buf[len];
+	const int len = 3;
+	unsigned char in_buf[len];
+	unsigned char out_buf[len];
 	
 	SPI0_CLK = (1 << 8);
 	
 	for (ch = 0; ch < len; ch++) {
-		in_buf[ch] = MCP_START|MCP_SINGLE|MCP_CH(ch);
-	}
+		in_buf[0] = 1;
+		in_buf[1] = 128 | (ch << 4);
+		in_buf[2] = 0;
+		
+		printk("channel %d:\n", ch);
+		pn_mcp_read(in_buf, len, out_buf, len);
 	
-	pn_mcp_read(in_buf, len, out_buf, len);
+		for (i = 0; i < len; i++) {
+			printk("channel %d, byte%d: %d\n", ch, i, out_buf[i]);
+		}
+	}
 }
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
