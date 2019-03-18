@@ -287,10 +287,12 @@ static void pn_mcp_read(unsigned char *buffer) {
 		
 		while ((SPI0_CS & SPI0_CS_RXD) && bufidx < 2) {
 			buffer[channel + bufidx] = SPI0_FIFO;
-			pr_err("channel %d, byte %d, read %d\n", channel, bufidx, buffer[bufidx]);
+			printk("channel %d, byte %d, read %d\n", channel, bufidx, buffer[bufidx]);
 			
 			bufidx++;
 		}
+		
+		channel++;
 	}
 	
 	while (!(SPI0_CS & SPI0_CS_DONE));
