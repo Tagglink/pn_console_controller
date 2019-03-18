@@ -281,8 +281,6 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 			in_idx++;
 		}
 		
-		while (!(SPI0_CS & SPI0_CS_RXD) && !(SPI0_CS & SPI0_CS_DONE));
-		
 		while (out_idx < out_len && (SPI0_CS & SPI0_CS_RXD)) {
 			out_buf[out_idx] = SPI0_FIFO;
 			out_idx++;
