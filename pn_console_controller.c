@@ -352,13 +352,17 @@ static unsigned short pn_mcp_read_channel(int channel) {
 static unsigned char pn_read_gpio(int btn) {
 	
 	if (btn < pn_button_count) {
-		int read = GPIO_READ(pn_gpio_map[btn]);
-		if (read == 0) {
-			return 1;
-		}
+		return GPIO_READ(pn_gpio_map[btn]);
 	}
 
 	return 0;
+}
+
+static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
+	int i;
+	for (i = 0; i < btn_len; i++) {
+		pr_err("btn %i value %i.", i, btn_data[i]);
+	}
 }
 
 static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
@@ -369,6 +373,11 @@ static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, in
 	
 	for (i = 0; i < btn_len; i++) {
 		btn_data[i] = pn_read_gpio(i);
+	}
+
+	if (pn->mcp_failed == 0) {
+		pn_log_buttons(btn_data, pn_button_count);
+		pn->mcp_failed = 1;
 	}
 }
 
@@ -475,13 +484,6 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 	}
 }
 
-static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
-	int i;
-	for (i = 0; i < btn_len; i++) {
-		pr_err("btn %i value %i.", i, btn_data[i]);
-	}
-}
-
 static void pn_process_packet(struct pn* pn) {
 	unsigned short mcp_data[pn_mcp_channels];
 	unsigned char btn_data[pn_button_count];
@@ -489,11 +491,6 @@ static void pn_process_packet(struct pn* pn) {
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
 	pn_read_packet(btn_data, mcp_data, pn_button_count, pn_mcp_channels);
-
-	if (pn->mcp_failed == 0) {
-		pn_log_buttons(btn_data, pn_button_count);
-		pn->mcp_failed = 1;
-	}
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
