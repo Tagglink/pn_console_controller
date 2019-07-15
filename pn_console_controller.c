@@ -178,7 +178,7 @@ struct pn {
 static struct pn *pn_base;
 
 static const int pn_mcp_channels = 6;
-static const int pn_package_bytes = 6;
+static const int pn_button_count = 14;
 
 static const int pn_teensy_button_count = 16;
 static const int pn_teensy_package_bytes = 25;
@@ -191,6 +191,14 @@ static const int pn_i2c_timeout_cycles = 5000;
 // Teensy buttons (16): A, B, X, Y, L, R, Start, Select, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down, L-Trigger, R-Trigger, L-Stick press, R-Stick press
 static const short pn_teensy_buttons[] = {
 	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_TL2, BTN_TR2, BTN_THUMBL, BTN_THUMBR
+};
+
+static const short pn_buttons[] = {
+	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_THUMBL, BTN_THUMBR
+};
+
+static const short pn_gpio_codes[] = {
+	4, 6, 13, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
 };
 
 static void setGpioPullUpState(int state, int gpioMask) {
@@ -223,6 +231,14 @@ static void spi_init(void) {
 	SET_GPIO_ALT(9, 0);
 	SET_GPIO_ALT(10, 0);
 	SET_GPIO_ALT(11, 0);
+}
+
+static void gpio_init(void) {
+	int i = 0;
+
+	for (i = 0; i < pn_button_count; i++) {
+		INP_GPIO(pn_gpio_codes[i]);
+	}
 }
 
 static void wait_i2c_done(int* timeout) {
@@ -322,13 +338,28 @@ static unsigned short pn_mcp_read_channel(int channel) {
 	return (out_buf[1] << 8) | out_buf[2];
 }
 
-static void pn_read_packet(unsigned short *mcp_data, int mcp_len) {
+static unsigned char pn_read_gpio(int btn) {
+	
+	if (btn < pn_button_count) {
+		return GPIO_READ(pn_gpio_codes[btn]);
+	}
+	else {
+		return 0;
+	}
+}
+
+static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
 	int i;
 	
 	for (i = 0; i < mcp_len; i++) {
 		mcp_data[i] = pn_mcp_read_channel(i);
 	}
+	
+	for (i = 0; i < btn_len; i++) {
+		btn_data[i] = pn_read_gpio(i);
+	}
 }
+
 
 static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
 	int i;
@@ -398,8 +429,8 @@ static int pn_constrain_number(int num, int min, int max) {
   return num;
 }
 
-static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data) {
-	int j;
+static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, unsigned char *btn_data) {
+	int i;
 
 	int lx = mcp_data[0];
 	int ly = mcp_data[1];
@@ -413,9 +444,9 @@ static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data) {
 	input_report_abs(dev, ABS_RY, ry);
 
 	// send button data to input device
-	/*for (j = 8; j < 24; j++) {
-		input_report_key(dev, pn_teensy_buttons[j - 8], data[j]);
-	}*/
+	for (i = 0; i < pn_button_count; i++) {
+		input_report_key(dev, pn_buttons[j], btn_data[j]);
+	}
 
 	input_sync(dev);
 }
@@ -434,11 +465,13 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 
 static void pn_process_packet(struct pn* pn) {
 	unsigned short mcp_data[pn_mcp_channels];
+	unsigned char btn_data[pn_button_count];
 
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
-	pn_read_packet(mcp_data, pn_package_bytes);
-	pn_input_report(pn->inpdev, mcp_data);
+	pn_read_packet(btn_data, mcp_data, pn_button_count, pn_mcp_channels);
+	
+	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
 	//pn_set_volume(pn->i2cAddresses[1], data[24]);
 }
@@ -515,12 +548,12 @@ static int __init pn_setup_teensy(struct pn* pn) {
 		input_set_abs_params(input_dev, ABS_RX + i, 0, 1023, 16, 32);
 
 	// setup buttons
-	for (i = 0; i < pn_teensy_button_count; i++) {
-		__set_bit(pn_teensy_buttons[i], input_dev->keybit);
+	for (i = 0; i < pn_button_count; i++) {
+		__set_bit(pn_buttons[i], input_dev->keybit);
 	}
 
-	setGpioAsInput(pn_teensy_interrupt_gpio);
-	setGpioPullUpState(0x01, (1 << pn_teensy_interrupt_gpio));
+	//setGpioAsInput(pn_teensy_interrupt_gpio);
+	//setGpioPullUpState(0x01, (1 << pn_teensy_interrupt_gpio));
 
 	// Configuring the amplifier
 	tx = 0xC2;
@@ -561,6 +594,7 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 
 	i2c_init();
 	spi_init();
+	gpio_init();
 
 	err = pn_setup_teensy(pn);
 	if (err)
