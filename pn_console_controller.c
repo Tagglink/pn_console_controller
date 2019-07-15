@@ -482,6 +482,11 @@ static void pn_process_packet(struct pn* pn) {
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
 	pn_read_packet(btn_data, mcp_data, pn_button_count, pn_mcp_channels);
+
+	if (!pn->used) {
+		pn_log_buttons(btn_data, pn_button_count);
+		pn->used = true;
+	}
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
