@@ -210,7 +210,7 @@ static void setGpioPullUpState(int gpioMask) {
 	*(gpio + 38) = 0x00;
 }
 
-static int getPullUpMask(int* gpioMap) {
+static int getPullUpMask(const short gpioMap[]) {
 	int mask = 0x0000000;
 
 	int i;
@@ -475,6 +475,13 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 	}
 }
 
+static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
+	int i;
+	for (i = 0; i < btn_len; i++) {
+		pr_err("btn %i value %i.", i, btn_data[i]);
+	}
+}
+
 static void pn_process_packet(struct pn* pn) {
 	unsigned short mcp_data[pn_mcp_channels];
 	unsigned char btn_data[pn_button_count];
@@ -491,13 +498,6 @@ static void pn_process_packet(struct pn* pn) {
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
 	//pn_set_volume(pn->i2cAddresses[1], data[24]);
-}
-
-static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
-	int i;
-	for (i = 0; i < btn_len; i++) {
-		pr_err("btn %i value %i.", i, btn_data[i]);
-	}
 }
 
 static void pn_timer(unsigned long private) {
