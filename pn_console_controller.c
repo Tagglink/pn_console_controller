@@ -352,17 +352,19 @@ static unsigned short pn_mcp_read_channel(int channel) {
 static unsigned char pn_read_gpio(int btn) {
 	
 	if (btn < pn_button_count) {
-		return !(GPIO_READ(pn_gpio_map[btn]));
+		int read = GPIO_READ(pn_gpio_map[btn]);
+		if (read == 0) {
+			return 1;
+		}
 	}
-	else {
-		return 0;
-	}
+
+	return 0;
 }
 
 static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
 	int i;
 	for (i = 0; i < mcp_len; i++) {
-		mcp_data[i] = pn_mcp_read_channel(i);
+		mcp_data[i] = 512;//DEBUG pn_mcp_read_channel(i);
 	}
 	
 	for (i = 0; i < btn_len; i++) {
