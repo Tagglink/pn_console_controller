@@ -374,11 +374,6 @@ static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, in
 	for (i = 0; i < btn_len; i++) {
 		btn_data[i] = pn_read_gpio(i);
 	}
-
-	if (pn->mcp_failed == 0) {
-		pn_log_buttons(btn_data, pn_button_count);
-		pn->mcp_failed = 1;
-	}
 }
 
 
@@ -491,6 +486,11 @@ static void pn_process_packet(struct pn* pn) {
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
 	pn_read_packet(btn_data, mcp_data, pn_button_count, pn_mcp_channels);
+
+	if (pn->mcp_failed == 0) {
+		pn_log_buttons(btn_data, pn_button_count);
+		pn->mcp_failed = 1;
+	}
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
