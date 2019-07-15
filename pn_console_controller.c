@@ -445,7 +445,7 @@ static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, uns
 
 	// send button data to input device
 	for (i = 0; i < pn_button_count; i++) {
-		input_report_key(dev, pn_buttons[j], btn_data[j]);
+		input_report_key(dev, pn_buttons[i], btn_data[i]);
 	}
 
 	input_sync(dev);
