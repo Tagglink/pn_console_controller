@@ -210,7 +210,7 @@ static void setGpioPullUpState(int gpioMask) {
 	*(gpio + 38) = 0x00;
 }
 
-static int getPullUpMask(int gpioMap[]) {
+static int getPullUpMask(int* gpioMap) {
 	int mask = 0x0000000;
 
 	int i;
@@ -352,7 +352,7 @@ static unsigned short pn_mcp_read_channel(int channel) {
 static unsigned char pn_read_gpio(int btn) {
 	
 	if (btn < pn_button_count) {
-		return !GPIO_READ(pn_gpio_map[btn]);
+		return !(GPIO_READ(pn_gpio_map[btn]));
 	}
 	else {
 		return 0;
