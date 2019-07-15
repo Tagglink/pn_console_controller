@@ -197,12 +197,12 @@ static const short pn_buttons[] = {
 	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_THUMBL, BTN_THUMBR
 };
 
-static const short pn_gpio_codes[] = {
+static const short pn_gpio_map[] = {
 	4, 6, 13, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
 };
 
-static void setGpioPullUpState(int state, int gpioMask) {
-	*(gpio + 37) = state;
+static void setGpioPullUpState(int gpioMask) {
+	*(gpio + 37) = 0x02;
 	udelay(10);
 	*(gpio + 38) = gpioMask;
 	udelay(10);
@@ -210,8 +210,18 @@ static void setGpioPullUpState(int state, int gpioMask) {
 	*(gpio + 38) = 0x00;
 }
 
-static void setGpioAsInput(int gpioNum) {
-	INP_GPIO(gpioNum);
+static int getPullUpMask(int gpioMap[]) {
+	int mask = 0x0000000;
+
+	int i;
+	for (i = 0; i < pn_button_count; i++) {
+		if (gpioMap[i] != -1) {   // to avoid unused pins
+			int pin_mask = 1 << gpioMap[i];
+			mask = mask | pin_mask;
+		}
+	}
+
+	return mask;
 }
 
 static void i2c_init(void) {
@@ -234,11 +244,12 @@ static void spi_init(void) {
 }
 
 static void gpio_init(void) {
-	int i = 0;
-
+	int i;
 	for (i = 0; i < pn_button_count; i++) {
-		INP_GPIO(pn_gpio_codes[i]);
+		INP_GPIO(pn_gpio_map[i]);
 	}
+
+	setGpioPullUpState(getPullUpMask(pn_gpio_map));
 }
 
 static void wait_i2c_done(int* timeout) {
@@ -341,7 +352,7 @@ static unsigned short pn_mcp_read_channel(int channel) {
 static unsigned char pn_read_gpio(int btn) {
 	
 	if (btn < pn_button_count) {
-		return GPIO_READ(pn_gpio_codes[btn]);
+		return !GPIO_READ(pn_gpio_map[btn]);
 	}
 	else {
 		return 0;
@@ -350,7 +361,6 @@ static unsigned char pn_read_gpio(int btn) {
 
 static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
 	int i;
-	
 	for (i = 0; i < mcp_len; i++) {
 		mcp_data[i] = pn_mcp_read_channel(i);
 	}
@@ -474,6 +484,13 @@ static void pn_process_packet(struct pn* pn) {
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
 	//pn_set_volume(pn->i2cAddresses[1], data[24]);
+}
+
+static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
+	int i;
+	for (i = 0; i < btn_len; i++) {
+		pr_err("btn %i value %i.", i, btn_data[i]);
+	}
 }
 
 static void pn_timer(unsigned long private) {
