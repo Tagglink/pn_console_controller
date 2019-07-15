@@ -347,23 +347,23 @@ static unsigned short pn_mcp_read_channel(int channel) {
 	return (out_buf[1] << 8) | out_buf[2];
 }
 
-static unsigned char pn_read_gpio(int btn) {
+static unsigned int pn_read_gpio(int btn) {
 	
 	if (btn < pn_button_count) {
 		return GPIO_READ(pn_gpio_map[btn]);
 	}
 
-	return 32;
+	return 4294967295;
 }
 
-static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
+static void pn_log_buttons(unsigned int* btn_data, int btn_len) {
 	int i;
 	for (i = 0; i < btn_len; i++) {
-		pr_err("btn %i value %i.", i, btn_data[i]);
+		printk("gpio %i value %i.", pn_gpio_map[i], btn_data[i]);
 	}
 }
 
-static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
+static void pn_read_packet(unsigned int *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
 	int i;
 	for (i = 0; i < mcp_len; i++) {
 		mcp_data[i] = 512;//DEBUG pn_mcp_read_channel(i);
@@ -479,7 +479,7 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 
 static void pn_process_packet(struct pn* pn) {
 	unsigned short mcp_data[pn_mcp_channels];
-	unsigned char btn_data[pn_button_count];
+	unsigned int btn_data[pn_button_count];
 
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
