@@ -490,9 +490,9 @@ static void pn_process_packet(struct pn* pn) {
 	
 	pn_read_packet(btn_data, mcp_data, pn_button_count, pn_mcp_channels);
 
-	if (!pn->used) {
+	if (pn->mcp_failed == 0) {
 		pn_log_buttons(btn_data, pn_button_count);
-		pn->used = true;
+		pn->mcp_failed = 1;
 	}
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
