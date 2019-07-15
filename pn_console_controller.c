@@ -361,7 +361,7 @@ static unsigned char pn_read_gpio(int btn) {
 	return 0;
 }
 
-static void pn_log_buttons(unsigned int* btn_data, int btn_len) {
+static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
 	int i;
 	for (i = 0; i < btn_len; i++) {
 		pr_err("gpio %i value %i.", pn_gpio_map[i], btn_data[i]);
