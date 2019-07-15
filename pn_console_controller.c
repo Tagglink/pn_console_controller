@@ -189,15 +189,15 @@ static const int pn_i2c_timeout_cycles = 5000;
 //                  ABS_X,     ABS_Y,     ABS_RX,    ABS_RY
 
 // Teensy buttons (16): A, B, X, Y, L, R, Start, Select, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down, L-Trigger, R-Trigger, L-Stick press, R-Stick press
-static const short pn_teensy_buttons[] = {
+static const int pn_teensy_buttons[] = {
 	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_TL2, BTN_TR2, BTN_THUMBL, BTN_THUMBR
 };
 
-static const short pn_buttons[] = {
+static const int pn_buttons[] = {
 	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_THUMBL, BTN_THUMBR
 };
 
-static const short pn_gpio_map[] = {
+static const int pn_gpio_map[] = {
 	4, 6, 13, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
 };
 
@@ -210,15 +210,13 @@ static void setGpioPullUpState(int gpioMask) {
 	*(gpio + 38) = 0x00;
 }
 
-static int getPullUpMask(const short gpioMap[]) {
+static int getPullUpMask(const int gpioMap[]) {
 	int mask = 0x0000000;
 
 	int i;
 	for (i = 0; i < pn_button_count; i++) {
-		if (gpioMap[i] != -1) {   // to avoid unused pins
-			int pin_mask = 1 << gpioMap[i];
-			mask = mask | pin_mask;
-		}
+		int pin_mask = 1 << gpioMap[i];
+		mask = mask | pin_mask;
 	}
 
 	return mask;
