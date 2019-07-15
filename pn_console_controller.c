@@ -353,7 +353,7 @@ static unsigned char pn_read_gpio(int btn) {
 		return GPIO_READ(pn_gpio_map[btn]);
 	}
 
-	return 0;
+	return 32;
 }
 
 static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
