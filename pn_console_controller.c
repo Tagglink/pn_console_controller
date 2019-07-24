@@ -371,7 +371,7 @@ static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
 static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
 	int i;
 	for (i = 0; i < mcp_len; i++) {
-		mcp_data[i] = 512;//DEBUG pn_mcp_read_channel(i);
+		mcp_data[i] = pn_mcp_read_channel(i);
 	}
 	
 	for (i = 0; i < btn_len; i++) {
@@ -490,10 +490,12 @@ static void pn_process_packet(struct pn* pn) {
 	
 	pn_read_packet(btn_data, mcp_data, pn_button_count, pn_mcp_channels);
 
+	/*
 	if (pn->mcp_failed == 0) {
 		pn_log_buttons(btn_data, pn_button_count);
 		pn->mcp_failed = 1;
 	}
+	*/
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
