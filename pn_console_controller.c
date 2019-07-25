@@ -173,11 +173,14 @@ struct pn {
 	int used;
 	int i2cAddresses[2];
 	int mcp_failed;
+	unsigned char volume;
+	unsigned char volume_dirty;
 };
 
 static struct pn *pn_base;
 
 static const int pn_mcp_channels = 6;
+static const int pn_mcp_volume_ch = 4;
 static const int pn_button_count = 14;
 
 static const int pn_teensy_button_count = 16;
@@ -485,6 +488,7 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 static void pn_process_packet(struct pn* pn) {
 	unsigned short mcp_data[pn_mcp_channels];
 	unsigned char btn_data[pn_button_count];
+	unsigned short volume_slider = mcp_data[pn_mcp_volume_ch];
 
 	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
 	
@@ -499,7 +503,7 @@ static void pn_process_packet(struct pn* pn) {
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
-	//pn_set_volume(pn->i2cAddresses[1], data[24]);
+	pn_set_volume(pn->i2cAddresses[0], volume_slider);
 }
 
 static void pn_timer(unsigned long private) {
