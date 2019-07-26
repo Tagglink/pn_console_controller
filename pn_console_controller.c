@@ -153,35 +153,33 @@ static volatile unsigned *bsc1;
 static volatile unsigned *spi0;
 
 struct pn_config {
-	int args[2];
+	int args[1];
 	unsigned int nargs;
 };
 
 static struct pn_config pn_cfg __initdata;
 
 module_param_array_named(args, pn_cfg.args, int, &(pn_cfg.nargs), 0);
-MODULE_PARM_DESC(args, "0: teensy i2c address, 1: TPA2016D2 i2c address");
+MODULE_PARM_DESC(args, "0: TPA2016D2 i2c address");
 
 #define PN_REFRESH_TIME HZ/100
 
+#define PN_BUTTON_COUNT 14
 #define PN_MCP_CHANNELS 6
+#define PN_MCP_VOLUME_CH (PN_MCP_CHANNELS-1)
 
 struct pn {
 	struct input_dev* inpdev;
 	struct timer_list timer;
 	struct mutex mutex;
 	int used;
-	int i2cAddresses[2];
+	int tpa2016address;
 	int mcp_failed;
 	unsigned char volume;
 	unsigned char volume_dirty;
 };
 
 static struct pn *pn_base;
-
-static const int pn_mcp_channels = 6;
-static const int pn_mcp_volume_ch = 4;
-static const int pn_button_count = 14;
 
 static const int pn_teensy_button_count = 16;
 static const int pn_teensy_package_bytes = 25;
@@ -217,7 +215,7 @@ static int getPullUpMask(const int gpioMap[]) {
 	int mask = 0x0000000;
 
 	int i;
-	for (i = 0; i < pn_button_count; i++) {
+	for (i = 0; i < PN_BUTTON_COUNT; i++) {
 		int pin_mask = 1 << gpioMap[i];
 		mask = mask | pin_mask;
 	}
@@ -246,7 +244,7 @@ static void spi_init(void) {
 
 static void gpio_init(void) {
 	int i;
-	for (i = 0; i < pn_button_count; i++) {
+	for (i = 0; i < PN_BUTTON_COUNT; i++) {
 		INP_GPIO(pn_gpio_map[i]);
 	}
 
@@ -352,7 +350,7 @@ static unsigned short pn_mcp_read_channel(int channel) {
 
 static unsigned char pn_read_gpio(int btn) {
 	
-	if (btn < pn_button_count) {
+	if (btn < PN_BUTTON_COUNT) {
 		int read = GPIO_READ(pn_gpio_map[btn]);
 		if (read > 0) {
 			return 0;
@@ -382,75 +380,6 @@ static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, in
 	}
 }
 
-
-static void pn_teensy_read_packet(int i2cAddress, unsigned char *data, int* error) {
-	int i;
-	int i2c_read_error = 0, interrupt = 0, timeout = 0;
-	int max_int_read_tries = 10;
-	const int package_len = 11;
-
-	/*
-	* byte 0-1: L-Stick X
-	* byte 2-3: L-Stick Y
-	* byte 4-5: R-Stick X
-	* byte 6-7: R-Stick Y
-	* byte 8: A, B, X, Y, L, R, Select, Start
-	* byte 9: L-Stick, R-Stick, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down, Custom1, Custom2
-	* byte 10: volume
-	*/
-	char result[package_len];
-
-	pn_i2c_write(i2cAddress, TEENSY_READ_INPUT, NULL, 0, &timeout);
-
-	if (!timeout) {
-		do {
-			interrupt = GPIO_READ(pn_teensy_interrupt_gpio);
-
-			if (interrupt) {
-				pn_i2c_read(i2cAddress, result, package_len, &i2c_read_error);
-				break;
-			}
-
-			udelay(1000);
-		} while (--max_int_read_tries);
-	}
-
-	if (i2c_read_error || timeout || !max_int_read_tries) {
-		*(error) = 1;
-	}
-	else {
-
-		// read the first 8 bytes as axes
-		for (i = 0; i < 8; i++) {
-			data[i] = result[i];
-		}
-
-		// read 8 buttons in the 9th byte
-		for (i = 8; i < 16; i++) {
-			data[i] = (result[8] << (i - 8)) & 0x80;
-		}
-
-		// read 8 buttons in the 10th byte
-		for (i = 16; i < 24; i++) {
-			data[i] = (result[9] << (i - 16)) & 0x80;
-		}
-
-		data[24] = result[10];
-	}
-}
-
-static int pn_constrain_number(int num, int min, int max) {
-
-  if (num < min) {
-    num = min;
-  }
-  else if (num > max) {
-    num = max;
-  }
-
-  return num;
-}
-
 static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, unsigned char *btn_data) {
 	int i;
 
@@ -466,7 +395,7 @@ static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, uns
 	input_report_abs(dev, ABS_RY, ry);
 
 	// send button data to input device
-	for (i = 0; i < pn_button_count; i++) {
+	for (i = 0; i < PN_BUTTON_COUNT; i++) {
 		input_report_key(dev, pn_buttons[i], btn_data[i]);
 	}
 
@@ -486,24 +415,21 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 }
 
 static void pn_process_packet(struct pn* pn) {
-	unsigned short mcp_data[pn_mcp_channels];
-	unsigned char btn_data[pn_button_count];
-	unsigned short volume_slider = mcp_data[pn_mcp_volume_ch];
-
-	//pn_teensy_read_packet(pn->i2cAddresses[0], data, &error);
+	unsigned short mcp_data[PN_MCP_CHANNELS];
+	unsigned char btn_data[PN_BUTTON_COUNT];
 	
-	pn_read_packet(btn_data, mcp_data, pn_button_count, pn_mcp_channels);
+	pn_read_packet(btn_data, mcp_data, PN_BUTTON_COUNT, PN_MCP_CHANNELS);
 
 	/*
 	if (pn->mcp_failed == 0) {
-		pn_log_buttons(btn_data, pn_button_count);
+		pn_log_buttons(btn_data, PN_BUTTON_COUNT);
 		pn->mcp_failed = 1;
 	}
 	*/
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
-	pn_set_volume(pn->i2cAddresses[0], volume_slider);
+	pn_set_volume(pn->tpa2016address, mcp_data[PN_MCP_VOLUME_CH]);
 }
 
 static void pn_timer(unsigned long private) {
@@ -537,7 +463,7 @@ static void pn_close(struct input_dev* dev) {
 	mutex_unlock(&pn->mutex);
 }
 
-static int __init pn_setup_teensy(struct pn* pn) {
+static int __init pn_setup(struct pn* pn) {
 	struct input_dev *input_dev;
 	int i;
 	int err;
@@ -578,16 +504,13 @@ static int __init pn_setup_teensy(struct pn* pn) {
 		input_set_abs_params(input_dev, ABS_RX + i, 0, 1023, 16, 32);
 
 	// setup buttons
-	for (i = 0; i < pn_button_count; i++) {
+	for (i = 0; i < PN_BUTTON_COUNT; i++) {
 		__set_bit(pn_buttons[i], input_dev->keybit);
 	}
 
-	//setGpioAsInput(pn_teensy_interrupt_gpio);
-	//setGpioPullUpState(0x01, (1 << pn_teensy_interrupt_gpio));
-
 	// Configuring the amplifier
 	tx = 0xC2;
-	pn_i2c_write(pn->i2cAddresses[1], 0x01, &tx, 1, &timeout);
+	pn_i2c_write(pn->tpa2016address, 0x01, &tx, 1, &timeout);
 
 	err = input_register_device(pn->inpdev);
 	if (err)
@@ -619,14 +542,13 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	mutex_init(&pn->mutex);
 	setup_timer(&pn->timer, pn_timer, (long)pn);
 
-	pn->i2cAddresses[0] = addresses[0];
-	pn->i2cAddresses[1] = addresses[1];
+	pn->tpa2016address = addresses[0];
 
 	i2c_init();
 	spi_init();
 	gpio_init();
 
-	err = pn_setup_teensy(pn);
+	err = pn_setup(pn);
 	if (err)
 		goto err_unreg_dev;
 
