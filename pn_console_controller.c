@@ -153,7 +153,7 @@ static volatile unsigned *bsc1;
 static volatile unsigned *spi0;
 
 struct pn_config {
-	int args[1];
+	int args[2];
 	unsigned int nargs;
 };
 
