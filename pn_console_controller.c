@@ -540,11 +540,11 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	spi_init();
 	gpio_init();
 
+	msleep(8000);
+
 	err = pn_setup(pn);
 	if (err)
 		goto err_unreg_dev;
-
-	msleep(3000);
 
 	return pn;
 
