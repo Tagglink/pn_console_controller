@@ -487,11 +487,11 @@ static int __init pn_setup(struct pn* pn) {
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 
 	for (i = 0; i < 2; i++)
-		input_set_abs_params(input_dev, ABS_X + i, 0, 1023, 180, 32);
+		input_set_abs_params(input_dev, ABS_X + i, 0, 1023, 180, 200);
 
 	// setup right stick axes
 	for (i = 0; i < 2; i++)
-		input_set_abs_params(input_dev, ABS_RX + i, 0, 1023, 180, 32);
+		input_set_abs_params(input_dev, ABS_RX + i, 0, 1023, 180, 200);
 
 	// setup buttons
 	for (i = 0; i < PN_BUTTON_COUNT; i++) {
