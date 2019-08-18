@@ -399,7 +399,7 @@ static void pn_set_volume(int dev_addr, unsigned short data) {
 	pn_i2c_write(dev_addr, 0x05, NULL, 0);
 	pn_i2c_read(dev_addr, &read_volume, 1);
 
-	if (read_volume != data && !error) {
+	if (read_volume != data) {
 		pn_i2c_write(dev_addr, 0x05, &c_data, 1);
 	}
 }
