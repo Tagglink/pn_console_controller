@@ -495,7 +495,6 @@ err_free_dev:
 static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	struct pn* pn;
 	int i;
-	int count = 0;
 	int err;
 
 	pn = kzalloc(sizeof(struct pn), GFP_KERNEL);
@@ -514,8 +513,6 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	i2c_init();
 	spi_init();
 	gpio_init();
-
-	msleep(10000);
 
 	err = pn_setup(pn);
 	if (err)
