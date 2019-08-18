@@ -544,6 +544,8 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	if (err)
 		goto err_unreg_dev;
 
+	msleep(3000);
+
 	return pn;
 
 err_unreg_dev:
