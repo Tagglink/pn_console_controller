@@ -160,13 +160,12 @@ struct pn_config {
 static struct pn_config pn_cfg __initdata;
 
 module_param_array_named(args, pn_cfg.args, int, &(pn_cfg.nargs), 0);
-MODULE_PARM_DESC(args, "0: TPA2016D2 i2c address");
+MODULE_PARM_DESC(args, "0: TPA2016D2 i2c address, 1: DS1050 i2c address");
 
 #define PN_REFRESH_TIME HZ/100
 
-#define PN_BUTTON_COUNT 14
+#define PN_BUTTON_COUNT 12 //14
 #define PN_MCP_CHANNELS 6
-#define PN_MCP_VOLUME_CH (PN_MCP_CHANNELS-1)
 
 struct pn {
 	struct input_dev* inpdev;
@@ -174,6 +173,7 @@ struct pn {
 	struct mutex mutex;
 	int used;
 	int tpa2016address;
+	int ds1050address;
 	int mcp_failed;
 	unsigned char volume;
 	unsigned char volume_dirty;
@@ -184,7 +184,6 @@ static struct pn *pn_base;
 static const int pn_teensy_button_count = 16;
 static const int pn_teensy_package_bytes = 25;
 static const int pn_teensy_interrupt_gpio = 26;
-static const int pn_i2c_timeout_cycles = 5000;
 
 // Teensy axes (4): L-Stick X, L-Stick Y, R-Stick X, R-Stick Y
 //                  ABS_X,     ABS_Y,     ABS_RX,    ABS_RY
@@ -195,11 +194,16 @@ static const int pn_teensy_buttons[] = {
 };
 
 static const int pn_buttons[] = {
-	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_THUMBL, BTN_THUMBR
+	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, /*BTN_START, BTN_SELECT,*/ BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_THUMBL, BTN_THUMBR
 };
 
 static const int pn_gpio_map[] = {
-	4, 6, 13, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
+	17, 23, 26, 27, 20, 24, /*18, 25,*/ 19, 6, 22, 13, 21, 4
+};
+
+// 
+static const int pn_mcp_map[] = {
+	2, 3, 4, 5, 6, 7
 };
 
 static void setGpioPullUpState(int gpioMask) {
@@ -251,18 +255,13 @@ static void gpio_init(void) {
 	setGpioPullUpState(getPullUpMask(pn_gpio_map));
 }
 
-static void wait_i2c_done(int* timeout) {
-	int timeout_counter = pn_i2c_timeout_cycles;
-	while ((!((BSC1_S)& BSC_S_DONE)) && --timeout_counter) {
+static void wait_i2c_done() {
+	while ((!((BSC1_S)& BSC_S_DONE))) {
 		udelay(10);
-	}
-
-	if (timeout_counter == 0) {
-		*(timeout) = 1;
 	}
 }
 
-static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short len, int* timeout) {
+static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short len) {
 	int idx;
 
 	BSC1_A = dev_addr;
@@ -276,13 +275,11 @@ static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short 
 	BSC1_S = CLEAR_STATUS; // Reset status bits (see #define)
 	BSC1_C = START_WRITE; // Start Write (see #define)
 
-	wait_i2c_done(timeout);
+	wait_i2c_done();
 }
 
-static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error) {
+static void pn_i2c_read(char dev_addr, char *buf, unsigned short len) {
 	unsigned short bufidx;
-	int timeout = 0;
-	int interrupt = 0;
 
 	bufidx = 0;
 
@@ -301,10 +298,6 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len, int* error
 			buf[bufidx++] = BSC1_FIFO;
 		}
 	} while ((!(BSC1_S & BSC_S_DONE)));
-
-	if ((BSC1_S & BSC_S_CLKT)) {
-		*(error) = 1;
-	}
 }
 
 static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_buf, int out_len) {
@@ -349,14 +342,11 @@ static unsigned short pn_mcp_read_channel(int channel) {
 }
 
 static unsigned char pn_read_gpio(int btn) {
-	
-	if (btn < PN_BUTTON_COUNT) {
-		int read = GPIO_READ(pn_gpio_map[btn]);
-		if (read > 0) {
-			return 0;
-		} else {
-			return 1;
-		}
+	int read = GPIO_READ(btn);
+	if (read > 0) {
+		return 0;
+	} else {
+		return 1;
 	}
 
 	return 0;
@@ -372,11 +362,11 @@ static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
 static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
 	int i;
 	for (i = 0; i < mcp_len; i++) {
-		mcp_data[i] = pn_mcp_read_channel(i);
+		mcp_data[i] = pn_mcp_read_channel(pn_mcp_map[i]);
 	}
 	
 	for (i = 0; i < btn_len; i++) {
-		btn_data[i] = pn_read_gpio(i);
+		btn_data[i] = pn_read_gpio(pn_gpio_map[i]);
 	}
 }
 
@@ -406,11 +396,11 @@ static void pn_set_volume(int dev_addr, unsigned char data) {
 	int error = 0;
 	unsigned char read_volume;
 
-	pn_i2c_write(dev_addr, 0x05, NULL, 0, &error);
-	pn_i2c_read(dev_addr, &read_volume, 1, &error);
+	pn_i2c_write(dev_addr, 0x05, NULL, 0);
+	pn_i2c_read(dev_addr, &read_volume, 1);
 
 	if (read_volume != data && !error) {
-		pn_i2c_write(dev_addr, 0x05, &data, 1, &error);
+		pn_i2c_write(dev_addr, 0x05, &data, 1);
 	}
 }
 
@@ -429,7 +419,7 @@ static void pn_process_packet(struct pn* pn) {
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 	
-	pn_set_volume(pn->tpa2016address, mcp_data[PN_MCP_VOLUME_CH]);
+	pn_set_volume(pn->tpa2016address, mcp_data[4]);
 }
 
 static void pn_timer(unsigned long private) {
@@ -543,6 +533,7 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	setup_timer(&pn->timer, pn_timer, (long)pn);
 
 	pn->tpa2016address = addresses[0];
+	pn->ds1050address = addresses[1];
 
 	i2c_init();
 	spi_init();
