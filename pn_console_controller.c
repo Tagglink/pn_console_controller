@@ -393,21 +393,15 @@ static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, uns
 }
 
 static void pn_set_volume(int dev_addr, unsigned short data) {
-	unsigned char read_volume;
 	unsigned char c_data = data / 4;
 
-	pn_i2c_write(dev_addr, 0x05, NULL, 0);
-	pn_i2c_read(dev_addr, &read_volume, 1);
-
-	if (read_volume != data) {
-		pn_i2c_write(dev_addr, 0x05, &c_data, 1);
-	}
+	pn_i2c_write(dev_addr, 0x05, &c_data, 1);
 }
 
 static void pn_set_brightness(int dev_addr, unsigned short data) {
 	unsigned char c_data = data / 32;
 
-	pn_i2c_write(dev_addr, 0x50, &data, 1);
+	pn_i2c_write(dev_addr, 0x50, &c_data, 1);
 }
 
 static void pn_process_packet(struct pn* pn) {
