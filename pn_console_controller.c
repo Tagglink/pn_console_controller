@@ -73,14 +73,6 @@ MODULE_LICENSE("GPL");
 
 #define BSC1_BASE  (PERI_BASE + 0x804000)
 
-/*
- * Teensy i2c gamepad defines
- */
-#define TEENSY_READ_INPUT      0x10
-#define TEENSY_BOUNCE_INTERVAL 0x20
-#define TEENSY_I2C_CLOCKRATE   0x30
-#define TEENSY_READ_VOLUME     0x40
-
  /*
  * Defines for I2C peripheral (aka BSC, or Broadcom Serial Controller)
  */
@@ -159,8 +151,8 @@ struct pn_config {
 
 static struct pn_config pn_cfg __initdata;
 
-module_param_array_named(args, pn_cfg.args, int, &(pn_cfg.nargs), 0);
-MODULE_PARM_DESC(args, "0: TPA2016D2 i2c address, 1: DS1050 i2c address");
+module_param_array(args, pn_cfg.args, int, &(pn_cfg.nargs), 0);
+MODULE_PARM_DESC(args, "0: TPA2016 i2c address, 1: DS1050 i2c address");
 
 #define PN_REFRESH_TIME HZ/100
 
@@ -180,18 +172,6 @@ struct pn {
 };
 
 static struct pn *pn_base;
-
-static const int pn_teensy_button_count = 16;
-static const int pn_teensy_package_bytes = 25;
-static const int pn_teensy_interrupt_gpio = 26;
-
-// Teensy axes (4): L-Stick X, L-Stick Y, R-Stick X, R-Stick Y
-//                  ABS_X,     ABS_Y,     ABS_RX,    ABS_RY
-
-// Teensy buttons (16): A, B, X, Y, L, R, Start, Select, D-Pad Left, D-Pad Right, D-Pad Up, D-Pad Down, L-Trigger, R-Trigger, L-Stick press, R-Stick press
-static const int pn_teensy_buttons[] = {
-	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_START, BTN_SELECT, BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_TL2, BTN_TR2, BTN_THUMBL, BTN_THUMBR
-};
 
 static const int pn_buttons[] = {
 	BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, /*BTN_START, BTN_SELECT,*/ BTN_DPAD_LEFT, BTN_DPAD_RIGHT, BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_THUMBL, BTN_THUMBR
@@ -540,7 +520,7 @@ static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	spi_init();
 	gpio_init();
 
-	msleep(8000);
+	msleep(10000);
 
 	err = pn_setup(pn);
 	if (err)
