@@ -151,7 +151,7 @@ struct pn_config {
 
 static struct pn_config pn_cfg __initdata;
 
-module_param_array(args, pn_cfg.args, int, &(pn_cfg.nargs), 0);
+module_param_array_named(args, pn_cfg.args, int, &(pn_cfg.nargs), 0);
 MODULE_PARM_DESC(args, "0: TPA2016 i2c address, 1: DS1050 i2c address");
 
 #define PN_REFRESH_TIME HZ/100
@@ -166,9 +166,6 @@ struct pn {
 	int used;
 	int tpa2016address;
 	int ds1050address;
-	int mcp_failed;
-	unsigned char volume;
-	unsigned char volume_dirty;
 };
 
 static struct pn *pn_base;
@@ -441,8 +438,6 @@ static int __init pn_setup(struct pn* pn) {
 	int timeout;
 	char phys[32];
 	unsigned char tx = 0x00;
-	
-	pn->mcp_failed = 0;
 
 	pn->inpdev = input_dev = input_allocate_device();
 	if (!input_dev) {
