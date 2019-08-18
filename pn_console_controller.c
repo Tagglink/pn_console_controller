@@ -255,7 +255,7 @@ static void gpio_init(void) {
 	setGpioPullUpState(getPullUpMask(pn_gpio_map));
 }
 
-static void wait_i2c_done() {
+static void wait_i2c_done(void) {
 	while ((!((BSC1_S)& BSC_S_DONE))) {
 		udelay(10);
 	}
@@ -500,7 +500,7 @@ static int __init pn_setup(struct pn* pn) {
 
 	// Configuring the amplifier
 	tx = 0xC2;
-	pn_i2c_write(pn->tpa2016address, 0x01, &tx, 1, &timeout);
+	pn_i2c_write(pn->tpa2016address, 0x01, &tx, 1);
 
 	err = input_register_device(pn->inpdev);
 	if (err)
