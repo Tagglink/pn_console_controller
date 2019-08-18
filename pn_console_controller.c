@@ -518,6 +518,8 @@ err_free_dev:
 }
 
 static struct pn __init * pn_probe(int* addresses, int n_addresses) {
+	msleep(8000); // wait for the rest of RetroPie to do its thing
+
 	struct pn* pn;
 	int i;
 	int count = 0;
