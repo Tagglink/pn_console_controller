@@ -396,8 +396,8 @@ static void pn_process_packet(struct pn* pn) {
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 
-	pn_set_volume(pn->tpa2016address, mcp_data[4]);
-	pn_set_brightness(pn->ds1050address, mcp_data[5]);
+	//pn_set_volume(pn->tpa2016address, mcp_data[4]);
+	//pn_set_brightness(pn->ds1050address, mcp_data[5]);
 }
 
 static void pn_timer(unsigned long private) {
