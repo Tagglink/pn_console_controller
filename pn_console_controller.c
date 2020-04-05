@@ -240,7 +240,7 @@ static void wait_i2c_done(void) {
 	}
 }
 
-static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short len) {
+static void pn_i2c_write(int dev_addr, unsigned char reg_addr, unsigned char *buf, unsigned short len) {
 	int idx;
 
 	BSC1_A = dev_addr;
@@ -258,7 +258,7 @@ static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short 
 	wait_i2c_done();
 }
 
-static void pn_i2c_read(char dev_addr, char *buf, unsigned short len) {
+static void pn_i2c_read(char dev_addr, unsigned char *buf, unsigned short len) {
 	unsigned short bufidx;
 
 	bufidx = 0;
@@ -306,7 +306,7 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	SPI0_CS &= ~(SPI0_CS_TA);
 }
 
-static unsigned short pn_mcp_read_channel(int channel) {
+static unsigned int pn_mcp_read_channel(int channel) {
 	const int len = 3;
 	unsigned char in_buf[len];
 	unsigned char out_buf[len];
@@ -338,7 +338,7 @@ static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
 	}
 }
 
-static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, int btn_len, int mcp_len) {
+static void pn_read_packet(unsigned char *btn_data, unsigned int *mcp_data, int btn_len, int mcp_len) {
 	int i;
 	for (i = 0; i < mcp_len; i++) {
 		mcp_data[i] = pn_mcp_read_channel(pn_mcp_map[i]);
@@ -349,7 +349,7 @@ static void pn_read_packet(unsigned char *btn_data, unsigned short *mcp_data, in
 	}
 }
 
-static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, unsigned char *btn_data) {
+static void pn_input_report(struct input_dev* dev, unsigned int *mcp_data, unsigned char *btn_data) {
 	int i;
 
 	int lx = mcp_data[0];
@@ -371,20 +371,20 @@ static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, uns
 	input_sync(dev);
 }
 
-static void pn_set_volume(int dev_addr, unsigned short data) {
+static void pn_set_volume(int dev_addr, unsigned int data) {
   unsigned char c_data = 0;
 
 	pn_i2c_write(dev_addr, 0x05, &c_data, 1);
 }
 
-static void pn_set_brightness(int dev_addr, unsigned short data) {
+static void pn_set_brightness(int dev_addr, unsigned int data) {
   // go from 0 <= data <= 1023 to 1 <= data <= 32
-  data = (data / 32) + 1;
-	pn_i2c_write(dev_addr, data, NULL, 0);
+  unsigned char c_data = (data / 32) + 1;
+	pn_i2c_write(dev_addr, c_data, NULL, 0);
 }
 
 static void pn_process_packet(struct pn* pn) {
-	unsigned short mcp_data[PN_MCP_CHANNELS];
+	unsigned int mcp_data[PN_MCP_CHANNELS];
 	unsigned char btn_data[PN_BUTTON_COUNT];
 	
 	pn_read_packet(btn_data, mcp_data, PN_BUTTON_COUNT, PN_MCP_CHANNELS);
