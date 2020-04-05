@@ -352,10 +352,10 @@ static void pn_read_packet(unsigned char *btn_data, unsigned int *mcp_data, int 
 static void pn_input_report(struct input_dev* dev, unsigned int *mcp_data, unsigned char *btn_data) {
 	int i;
 
-	int lx = mcp_data[4];
-	int ly = mcp_data[4];
-	int rx = mcp_data[5];
-	int ry = mcp_data[5];
+	int lx = mcp_data[0];
+	int ly = mcp_data[1];
+	int rx = mcp_data[2];
+	int ry = mcp_data[3];
 	
 	// send joystick data to input device
 	input_report_abs(dev, ABS_X, lx);
