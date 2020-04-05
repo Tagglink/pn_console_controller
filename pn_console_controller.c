@@ -476,7 +476,7 @@ static int __init pn_setup(struct pn* pn) {
 
 	// Configuring the amplifier
 	tx = 0xC2;
-	//pn_i2c_write(pn->tpa2016address, 0x01, &tx, 1);
+	pn_i2c_write(pn->tpa2016address, 0x01, &tx, 1);
 
 	err = input_register_device(pn->inpdev);
 	if (err)
