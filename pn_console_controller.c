@@ -373,8 +373,14 @@ static void pn_input_report(struct input_dev* dev, int *mcp_data, unsigned char 
 }
 
 static void pn_set_volume(int dev_addr, int data) {
-
-	pn_i2c_write(dev_addr, 0x05, &c_data, 1);
+  // go from 0 <= data <= 1023 to 36 <= vol < 64 (loops to 0 at 64)
+  unsigned char vol = ((data / 36) + 36) % 64;
+  unsigned char status = 0xC3;
+  if (vol < 1) {
+    status = 0x03;
+  }
+  pn_i2c_write(dev_addr, 0x01, &status, 1);
+	pn_i2c_write(dev_addr, 0x05, &vol, 1);
 }
 
 static void pn_set_brightness(int dev_addr, int data) {
@@ -494,7 +500,7 @@ static int __init pn_setup(struct pn* pn) {
   pn_i2c_write(pn->tpa2016address, 0x03, &tx, 1);
   tx = 0x00;
   pn_i2c_write(pn->tpa2016address, 0x04, &tx, 1);
-  tx = 0x1E;
+  tx = 0x00;
   pn_i2c_write(pn->tpa2016address, 0x05, &tx, 1);
   tx = 0x3A;
   pn_i2c_write(pn->tpa2016address, 0x06, &tx, 1);
