@@ -158,6 +158,7 @@ MODULE_PARM_DESC(args, "0: TPA2016 i2c address, 1: DS1050 i2c address");
 
 #define PN_BUTTON_COUNT 12 //14
 #define PN_MCP_CHANNELS 6
+#define PN_FUZZ_THRESHOLD 32
 
 struct pn {
 	struct input_dev* inpdev;
@@ -306,7 +307,7 @@ static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_bu
 	SPI0_CS &= ~(SPI0_CS_TA);
 }
 
-static unsigned int pn_mcp_read_channel(int channel) {
+static int pn_mcp_read_channel(int channel) {
 	const int len = 3;
 	unsigned char in_buf[len];
 	unsigned char out_buf[len];
@@ -338,7 +339,7 @@ static void pn_log_buttons(unsigned char* btn_data, int btn_len) {
 	}
 }
 
-static void pn_read_packet(unsigned char *btn_data, unsigned int *mcp_data, int btn_len, int mcp_len) {
+static void pn_read_packet(unsigned char *btn_data, int *mcp_data, int btn_len, int mcp_len) {
 	int i;
 	for (i = 0; i < mcp_len; i++) {
 		mcp_data[i] = pn_mcp_read_channel(pn_mcp_map[i]);
@@ -349,7 +350,7 @@ static void pn_read_packet(unsigned char *btn_data, unsigned int *mcp_data, int 
 	}
 }
 
-static void pn_input_report(struct input_dev* dev, unsigned int *mcp_data, unsigned char *btn_data) {
+static void pn_input_report(struct input_dev* dev, int *mcp_data, unsigned char *btn_data) {
 	int i;
 
 	int lx = mcp_data[0];
@@ -371,20 +372,19 @@ static void pn_input_report(struct input_dev* dev, unsigned int *mcp_data, unsig
 	input_sync(dev);
 }
 
-static void pn_set_volume(int dev_addr, unsigned int data) {
-  unsigned char c_data = 0;
+static void pn_set_volume(int dev_addr, int data) {
 
 	pn_i2c_write(dev_addr, 0x05, &c_data, 1);
 }
 
-static void pn_set_brightness(int dev_addr, unsigned int data) {
+static void pn_set_brightness(int dev_addr, int data) {
   // go from 0 <= data <= 1023 to 1 <= data <= 32
   unsigned char c_data = (data / 32) + 1;
 	pn_i2c_write(dev_addr, c_data, NULL, 0);
 }
 
 static void pn_process_packet(struct pn* pn) {
-	unsigned int mcp_data[PN_MCP_CHANNELS];
+	int mcp_data[PN_MCP_CHANNELS];
 	unsigned char btn_data[PN_BUTTON_COUNT];
 	
 	pn_read_packet(btn_data, mcp_data, PN_BUTTON_COUNT, PN_MCP_CHANNELS);
@@ -398,8 +398,12 @@ static void pn_process_packet(struct pn* pn) {
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 
-	//pn_set_volume(pn->tpa2016address, mcp_data[4]);
-	pn_set_brightness(pn->ds1050address, mcp_data[5]);
+  if (((pn->recent_volume - mcp_data[5]) & 0x7FFFFFFF) > PN_FUZZ_THRESHOLD) {
+    pn_set_volume(pn->tpa2016address, mcp_data[5]);
+    pn->recent_volume = mcp_data[5];
+  }
+	
+	//pn_set_brightness(pn->ds1050address, mcp_data[5]);
 }
 
 static void pn_timer(unsigned long private) {
@@ -497,9 +501,13 @@ static int __init pn_setup(struct pn* pn) {
   tx = 0xC2;
   pn_i2c_write(pn->tpa2016address, 0x07, &tx, 1);
 
+  pn->recent_volume = 1023;
+
   // Set the brightness to 100%
   // range 0 - 32
   pn_i2c_write(pn->ds1050address, 32, NULL, 0);
+
+  pn->recent_brightness = 1023;
 
 	err = input_register_device(pn->inpdev);
 	if (err)
