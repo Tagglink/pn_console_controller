@@ -283,7 +283,6 @@ static void pn_i2c_read(char dev_addr, char *buf, unsigned short len) {
 static void pn_mcp_read(unsigned char *in_buf, int in_len, unsigned char *out_buf, int out_len) {
 	int in_idx = 0;
 	int out_idx = 0;
-	int i;
 	
 	SPI0_CS |= SPI0_CS_CHIP0|SPI0_CS_CLEAR_RX|SPI0_CS_CLEAR_TX|SPI0_CS_CPHA;
 	
@@ -373,6 +372,8 @@ static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, uns
 }
 
 static void pn_set_volume(int dev_addr, unsigned short data) {
+  unsigned char c_data = 0;
+
 	pn_i2c_write(dev_addr, 0x05, &c_data, 1);
 }
 
@@ -436,7 +437,6 @@ static int __init pn_setup(struct pn* pn) {
 	struct input_dev *input_dev;
 	int i;
 	int err;
-	int timeout;
 	char phys[32];
 	unsigned char tx = 0x00;
 
@@ -517,7 +517,6 @@ err_free_dev:
 
 static struct pn __init * pn_probe(int* addresses, int n_addresses) {
 	struct pn* pn;
-	int i;
 	int err;
 
 	pn = kzalloc(sizeof(struct pn), GFP_KERNEL);
