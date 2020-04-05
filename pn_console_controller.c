@@ -404,10 +404,7 @@ static void pn_process_packet(struct pn* pn) {
 	
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 
-  if (((pn->recent_volume - mcp_data[5]) & 0x7FFFFFFF) > PN_FUZZ_THRESHOLD) {
-    pn_set_volume(pn->tpa2016address, mcp_data[5]);
-    pn->recent_volume = mcp_data[5];
-  }
+  pn_set_volume(pn->tpa2016address, mcp_data[5]);
 	
 	//pn_set_brightness(pn->ds1050address, mcp_data[5]);
 }
@@ -495,10 +492,9 @@ static int __init pn_setup(struct pn* pn) {
   // REG 07: 0xC2 - max dB = 30dB, compression = 4:1
 	tx = 0xC2;
 	pn_i2c_write(pn->tpa2016address, 0x01, &tx, 1);
-  tx = 0x01;
+  tx = 0x00;
   pn_i2c_write(pn->tpa2016address, 0x02, &tx, 1);
   pn_i2c_write(pn->tpa2016address, 0x03, &tx, 1);
-  tx = 0x00;
   pn_i2c_write(pn->tpa2016address, 0x04, &tx, 1);
   tx = 0x00;
   pn_i2c_write(pn->tpa2016address, 0x05, &tx, 1);
