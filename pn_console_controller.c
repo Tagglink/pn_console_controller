@@ -158,7 +158,7 @@ MODULE_PARM_DESC(args, "0: TPA2016 i2c address, 1: DS1050 i2c address");
 
 #define PN_BUTTON_COUNT 12 //14
 #define PN_MCP_CHANNELS 6
-#define PN_FUZZ_THRESHOLD 32
+#define PN_FUZZ_THRESHOLD 128
 
 struct pn {
 	struct input_dev* inpdev;
@@ -373,10 +373,10 @@ static void pn_input_report(struct input_dev* dev, int *mcp_data, unsigned char 
 }
 
 static void pn_set_volume(int dev_addr, int data) {
-  // go from 0 <= data <= 1023 to 36 <= vol < 64 (loops to 0 at 64)
+  // dividing by 32 will go from 10-bit value to 5-bit value, then we add sign on the 6th bit
   unsigned char vol = (data / 32) | 0x20;
   unsigned char status = 0xC3;
-  if (data > 1023 - PN_FUZZ_THRESHOLD) {
+  if (data < PN_FUZZ_THRESHOLD) {
     status = 0x03;
   }
   pn_i2c_write(dev_addr, 0x01, &status, 1);
