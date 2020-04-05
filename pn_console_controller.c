@@ -374,9 +374,9 @@ static void pn_input_report(struct input_dev* dev, int *mcp_data, unsigned char 
 
 static void pn_set_volume(int dev_addr, int data) {
   // go from 0 <= data <= 1023 to 36 <= vol < 64 (loops to 0 at 64)
-  unsigned char vol = ((data / 36) + 36) % 64;
+  unsigned char vol = (data / 32) | 0x20;
   unsigned char status = 0xC3;
-  if (data < PN_FUZZ_THRESHOLD) {
+  if (data > 1023 - PN_FUZZ_THRESHOLD) {
     status = 0x03;
   }
   pn_i2c_write(dev_addr, 0x01, &status, 1);
