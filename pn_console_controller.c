@@ -166,6 +166,8 @@ struct pn {
 	int used;
 	int tpa2016address;
 	int ds1050address;
+  int recent_volume;
+  int recent_brightness;
 };
 
 static struct pn *pn_base;
@@ -246,8 +248,9 @@ static void pn_i2c_write(int dev_addr, char reg_addr, char *buf, unsigned short 
 	BSC1_C = BSC_C_CLEAR;
 
 	BSC1_FIFO = reg_addr; // start register address
-	for (idx = 0; idx < len; idx++)
-		BSC1_FIFO = buf[idx];
+
+  for (idx = 0; idx < len; idx++)
+    BSC1_FIFO = buf[idx];
 
 	BSC1_S = CLEAR_STATUS; // Reset status bits (see #define)
 	BSC1_C = START_WRITE; // Start Write (see #define)
@@ -370,15 +373,13 @@ static void pn_input_report(struct input_dev* dev, unsigned short *mcp_data, uns
 }
 
 static void pn_set_volume(int dev_addr, unsigned short data) {
-	unsigned char c_data = data / 4;
-
 	pn_i2c_write(dev_addr, 0x05, &c_data, 1);
 }
 
 static void pn_set_brightness(int dev_addr, unsigned short data) {
-	unsigned char c_data = data / 32;
-
-	pn_i2c_write(dev_addr, 0x50, &c_data, 1);
+  // go from 0 <= data <= 1023 to 1 <= data <= 32
+  data = (data / 32) + 1;
+	pn_i2c_write(dev_addr, data, NULL, 0);
 }
 
 static void pn_process_packet(struct pn* pn) {
@@ -397,7 +398,7 @@ static void pn_process_packet(struct pn* pn) {
 	pn_input_report(pn->inpdev, mcp_data, btn_data);
 
 	//pn_set_volume(pn->tpa2016address, mcp_data[4]);
-	//pn_set_brightness(pn->ds1050address, mcp_data[5]);
+	pn_set_brightness(pn->ds1050address, mcp_data[5]);
 }
 
 static void pn_timer(unsigned long private) {
@@ -475,8 +476,30 @@ static int __init pn_setup(struct pn* pn) {
 	}
 
 	// Configuring the amplifier
+  // REG 01: 0xC3 - turn on the noise gate
+  // REG 02: 0x01 - lowest ATK
+  // REG 03: 0x02 - lowest REL
+  // REG 04: 0x00 - disbale HOLD
+  // REG 05: 0x00 - 0 dB (range: 0x24(36) - 0x3F(63), max: 0 (28 steps))
+  // REG 06: 0x3A - noise gate and output limiter default
+  // REG 07: 0xC2 - max dB = 30dB, compression = 4:1
 	tx = 0xC2;
 	pn_i2c_write(pn->tpa2016address, 0x01, &tx, 1);
+  tx = 0x01;
+  pn_i2c_write(pn->tpa2016address, 0x02, &tx, 1);
+  pn_i2c_write(pn->tpa2016address, 0x03, &tx, 1);
+  tx = 0x00;
+  pn_i2c_write(pn->tpa2016address, 0x04, &tx, 1);
+  tx = 0x1E;
+  pn_i2c_write(pn->tpa2016address, 0x05, &tx, 1);
+  tx = 0x3A;
+  pn_i2c_write(pn->tpa2016address, 0x06, &tx, 1);
+  tx = 0xC2;
+  pn_i2c_write(pn->tpa2016address, 0x07, &tx, 1);
+
+  // Set the brightness to 100%
+  // range 0 - 32
+  pn_i2c_write(pn->ds1050address, 32, NULL, 0);
 
 	err = input_register_device(pn->inpdev);
 	if (err)
